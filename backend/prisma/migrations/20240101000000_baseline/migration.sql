@@ -1,0 +1,1 @@
+-- Baseline migration (tables already exist)

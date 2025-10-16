@@ -1,0 +1,274 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Group Master - For ALL user types including Internal Departments
+model UserGroup {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  type        GroupType   // INTERNAL_DEPARTMENT, VENDOR, TOWER_PROVIDER, CUSTOMER
+  code        String?     @unique // Department code for internal groups
+  address     String?
+  logo        String?     // URL to uploaded logo
+  contactPerson String?
+  phone       String?
+  email       String?
+  
+  // Internal Department specific fields
+  manager     String?     // Department manager name
+  budget      Decimal?    // Department budget (for internal)
+  location    String?     // Office location
+  
+  status      GroupStatus @default(ACTIVE)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+  
+  // Relations
+  users       User[]
+  
+  @@map("user_groups")
+}
+
+// Role Master - Complex role system
+model Role {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String?
+  group       UserType    // Which user type this role belongs to
+  level       AccessLevel // Geographical access level
+  isSingle    Boolean     @default(false) // Single user per role or multiple allowed
+  isActive    Boolean     @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  userRoles   UserRole[]
+  roleProcesses RoleProcess[]
+  
+  @@map("roles")
+}
+
+// Process Master - Business processes users can access
+model Process {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String?
+  code        String @unique // Process code
+  category    String? // Process category/module
+  isActive    Boolean @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  roleProcesses RoleProcess[]
+  userProcesses UserProcess[]
+  
+  @@map("processes")
+}
+
+// Bridge table for Role-Process many-to-many
+model RoleProcess {
+  roleId    String
+  processId String
+  canView   Boolean @default(true)
+  canCreate Boolean @default(false)
+  canUpdate Boolean @default(false)
+  canDelete Boolean @default(false)
+  
+  role    Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  process Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  
+  @@id([roleId, processId])
+  @@map("role_processes")
+}
+
+// Geographic Privilege Master
+model GeographicPrivilege {
+  id       String @id @default(cuid())
+  name     String @unique
+  level    AccessLevel
+  parentId String?
+  code     String @unique
+  isActive Boolean @default(true)
+  
+  // Self-referencing for hierarchy (National > Region > Area > City)
+  parent   GeographicPrivilege? @relation("PrivilegeHierarchy", fields: [parentId], references: [id])
+  children GeographicPrivilege[] @relation("PrivilegeHierarchy")
+  
+  // Relations
+  users UserPrivilege[]
+  
+  @@map("geographic_privileges")
+}
+
+// Enhanced User Model - Keep existing fields for compatibility
+model User {
+  id           String    @id @default(cuid())
+  loginId      String?   @unique // Login ID/Account
+  email        String    @unique
+  username     String?   @unique // Keep existing username for compatibility
+  password     String?   // Keep for compatibility
+  passwordHash String?   @map("password_hash") // Keep existing field
+  name         String?   // Full Name
+  firstName    String?   @map("first_name") // Keep existing
+  lastName     String?   @map("last_name") // Keep existing
+  designation  String?   // User Title/Position
+  contactNumber String?  @map("contact_number") // Optional contact number
+  signature    String?   // URL to uploaded signature image
+  
+  // User classification
+  userType     UserType?
+  userGroupId  String?   // Link to user groups
+  
+  // Keep existing role field for compatibility
+  role         String?   // Keep existing simple role
+  
+  // Security & status
+  status       UserStatus? @default(ACTIVE)
+  isActive     Boolean   @default(true) // Keep existing field
+  lastLogin    DateTime? @map("last_login")
+  failedAttempts Int?    @default(0)
+  failedLoginAttempts Int? @default(0) @map("failed_login_attempts") // Keep existing
+  lockedUntil  DateTime?
+  accountLockedUntil DateTime? @map("account_locked_until") // Keep existing
+  
+  // Timestamps & tracking
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  createdBy    String?
+  updatedBy    String?
+  
+  // Relations
+  userGroup    UserGroup? @relation(fields: [userGroupId], references: [id])
+  userRoles    UserRole[]
+  userProcesses UserProcess[]
+  userPrivileges UserPrivilege[]
+  
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+  
+  @@map("users")
+}
+
+// User-Role many-to-many (users can have multiple roles)
+model UserRole {
+  userId String
+  roleId String
+  assignedAt DateTime @default(now())
+  assignedBy String?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+// User-Process access (can override role permissions)
+model UserProcess {
+  userId    String
+  processId String
+  canView   Boolean @default(true)
+  canCreate Boolean @default(false)
+  canUpdate Boolean @default(false)
+  canDelete Boolean @default(false)
+  assignedAt DateTime @default(now())
+  
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  process Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  
+  @@id([userId, processId])
+  @@map("user_processes")
+}
+
+// User Geographic Privileges
+model UserPrivilege {
+  userId      String
+  privilegeId String
+  assignedAt  DateTime @default(now())
+  
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  privilege GeographicPrivilege @relation(fields: [privilegeId], references: [id], onDelete: Cascade)
+  
+  @@id([userId, privilegeId])
+  @@map("user_privileges")
+}
+
+// Existing models - keep for compatibility
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  action    String
+  resource  String
+  resourceId String? @map("resource_id")
+  oldData   Json?    @map("old_data")
+  newData   Json?    @map("new_data")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("audit_logs")
+}
+
+// Enums
+enum UserType {
+  INTERNAL
+  CUSTOMER
+  VENDOR
+  TOWER_PROVIDER
+}
+
+enum GroupType {
+  INTERNAL_DEPARTMENT  // IT, Engineering, Operations, etc.
+  CUSTOMER
+  VENDOR
+  TOWER_PROVIDER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum GroupStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum AccessLevel {
+  NATIONAL
+  REGION
+  AREA
+  CITY
+}

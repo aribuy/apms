@@ -1,0 +1,59 @@
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import UserManagement from './components/UserManagement/UserManagement';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { LoginPage } from './components/auth/LoginPage';
+
+const TeleCoreHomepage: React.FC = () => {
+  const { user } = useAuth();
+  const [activeModule, setActiveModule] = useState<string>('dashboard');
+
+  if (activeModule === 'dashboard') {
+    return <div>Dashboard Placeholder</div>;
+  }
+
+  const currentModule = { name: 'User Management' };
+
+  return (
+    <div>
+      <button onClick={() => setActiveModule('dashboard')}>Back to Dashboard</button>
+      <h1>{currentModule.name}</h1>
+      {activeModule === 'user-management' ? (
+        <UserManagement />
+      ) : (
+        <div>Module under development</div>
+      )}
+    </div>
+  );
+};
+
+const AppContent: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  return (
+    <Routes>
+      <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/" />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute adminOnly>
+            <TeleCoreHomepage />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
+  );
+}
+
+export default App;

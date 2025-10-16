@@ -1,0 +1,2 @@
+sed -i '/handleTabChange.*tabId.*=>/a\    console.log("Mobile menu click - Tab:", tabId, "isMobileMenuOpen:", isMobileMenuOpen);' src/components/UserManagement/UserManagement.tsx
+sed -i '/setIsMobileMenuOpen.*false/a\    console.log("Closing mobile menu");' src/components/UserManagement/UserManagement.tsx

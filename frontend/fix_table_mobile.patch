@@ -1,0 +1,16 @@
+# Replace table container dengan responsive version
+sed -i 's/<div className="bg-white rounded-lg shadow overflow-hidden">/<div className="bg-white rounded-lg shadow overflow-x-auto">/' src/components/UserManagement/UserList.tsx
+
+# Fix table cell padding untuk mobile
+sed -i 's/px-6 py-4/px-2 py-3 sm:px-6 sm:py-4/g' src/components/UserManagement/UserList.tsx
+sed -i 's/px-6 py-3/px-2 py-3 sm:px-6/g' src/components/UserManagement/UserList.tsx
+
+# Fix text wrapping untuk mobile
+sed -i 's/whitespace-nowrap/whitespace-nowrap sm:whitespace-nowrap/g' src/components/UserManagement/UserList.tsx
+
+# Fix text size untuk mobile
+sed -i 's/text-sm font-medium text-gray-900/text-xs sm:text-sm font-medium text-gray-900/g' src/components/UserManagement/UserList.tsx
+sed -i 's/text-sm text-gray-500/text-xs sm:text-sm text-gray-500/g' src/components/UserManagement/UserList.tsx
+
+# Add min-width ke table untuk proper scroll
+sed -i 's/<table className="min-w-full/<table className="min-w-[600px] w-full/' src/components/UserManagement/UserList.tsx
