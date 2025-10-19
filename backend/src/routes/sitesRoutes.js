@@ -26,6 +26,66 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Check for duplicate sites
+router.post('/check-duplicates', async (req, res) => {
+  const { sites } = req.body;
+  
+  if (!sites || !Array.isArray(sites)) {
+    return res.status(400).json({ error: 'Sites array is required' });
+  }
+  
+  try {
+    const siteIds = sites.map(site => site.siteId);
+    const existingSites = await prisma.sites.findMany({
+      where: {
+        site_id: { in: siteIds }
+      }
+    });
+    
+    const duplicateIds = existingSites.map(site => site.site_id);
+    const duplicateSites = sites.filter(site => duplicateIds.includes(site.siteId));
+    
+    res.json({
+      duplicates: duplicateSites.length,
+      duplicateList: duplicateSites,
+      existingData: existingSites
+    });
+  } catch (error) {
+    console.error('Error checking duplicates:', error);
+    res.status(500).json({ error: 'Failed to check duplicates' });
+  }
+});
+
+// Update existing sites (bulk)
+router.put('/update-bulk', async (req, res) => {
+  const { sites } = req.body;
+  
+  try {
+    let updatedCount = 0;
+    
+    for (const site of sites) {
+      await prisma.sites.updateMany({
+        where: { site_id: site.siteId },
+        data: {
+          site_name: site.siteName,
+          region: site.region,
+          city: site.city,
+          updated_at: new Date()
+        }
+      });
+      updatedCount++;
+    }
+    
+    res.json({ 
+      message: `${updatedCount} sites updated successfully`,
+      updated: updatedCount
+    });
+  } catch (error) {
+    console.error('Error updating sites:', error);
+    res.status(500).json({ error: 'Failed to update sites' });
+  }
+});
+
 // Create multiple sites (bulk)
 router.post('/bulk', async (req, res) => {
   const { sites } = req.body;
@@ -48,10 +108,14 @@ router.post('/bulk', async (req, res) => {
         fe_latitude: site.feLatitude,
         fe_longitude: site.feLongitude,
         status: site.status || 'ACTIVE'
-      }))
+      })),
+      skipDuplicates: true
     });
     
-    res.json({ message: `${sites.length} sites created successfully` });
+    res.json({ 
+      message: `${createdSites.count} sites created successfully`,
+      created: createdSites.count
+    });
   } catch (error) {
     console.error('Error creating sites:', error);
     res.status(500).json({ error: 'Failed to create sites' });

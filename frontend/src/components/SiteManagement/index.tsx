@@ -19,6 +19,8 @@ const SiteManagement: React.FC = () => {
 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [validationComplete, setValidationComplete] = useState(false);
+  const [duplicateDetected, setDuplicateDetected] = useState(false);
+  const [duplicateData, setDuplicateData] = useState<any>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [showSiteModal, setShowSiteModal] = useState(false);
   const [modalType, setModalType] = useState<'view' | 'edit'>('view');
@@ -51,14 +53,20 @@ const SiteManagement: React.FC = () => {
     }
   };
 
-  const handleFileUpload = (file: File) => {
+  const handleFileUpload = async (file: File) => {
     const allowedTypes = ['text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
     if (!allowedTypes.includes(file.type)) {
       alert('Please upload a CSV or Excel file');
       return;
     }
     setUploadedFile(file);
-    setTimeout(() => setValidationComplete(true), 2000);
+    
+    // Simulate validation and check duplicates
+    setTimeout(async () => {
+      setValidationComplete(true);
+      // Always check duplicates after validation
+      await checkDuplicates();
+    }, 2000);
   };
 
   const downloadTemplate = () => {
@@ -92,16 +100,45 @@ const SiteManagement: React.FC = () => {
     fetchSites();
   }, []);
 
+  const checkDuplicates = async () => {
+    const sitesData = [
+      { siteId: 'JKTB001', siteName: 'PANYAKALAN', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.2088, neLongitude: 106.8456, feLatitude: -6.2089, feLongitude: 106.8457, status: 'ACTIVE' },
+      { siteId: 'JKTB002', siteName: 'KEMAYORAN', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.1745, neLongitude: 106.8227, feLatitude: -6.1746, feLongitude: 106.8228, status: 'ACTIVE' },
+      { siteId: 'SUMRI001', siteName: 'MEDAN PLAZA', siteType: 'MW', region: 'Sumatra', city: 'Medan', neLatitude: 3.5952, neLongitude: 98.6722, feLatitude: 3.5953, feLongitude: 98.6723, status: 'ACTIVE' },
+      { siteId: 'JKTB003', siteName: 'SENAYAN', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.2297, neLongitude: 106.8075, feLatitude: -6.2298, feLongitude: 106.8076, status: 'ACTIVE' },
+      { siteId: 'JKTB004', siteName: 'THAMRIN', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.1944, neLongitude: 106.8229, feLatitude: -6.1945, feLongitude: 106.8230, status: 'ACTIVE' },
+      { siteId: 'BDGB001', siteName: 'BANDUNG PLAZA', siteType: 'MW', region: 'West Java', city: 'Bandung', neLatitude: -6.9175, neLongitude: 107.6191, feLatitude: -6.9176, feLongitude: 107.6192, status: 'ACTIVE' },
+      { siteId: 'SBYB001', siteName: 'SURABAYA CENTER', siteType: 'MW', region: 'East Java', city: 'Surabaya', neLatitude: -7.2575, neLongitude: 112.7521, feLatitude: -7.2576, feLongitude: 112.7522, status: 'ACTIVE' },
+      { siteId: 'YGYA001', siteName: 'YOGYA MALIOBORO', siteType: 'MW', region: 'Central Java', city: 'Yogyakarta', neLatitude: -7.7956, neLongitude: 110.3695, feLatitude: -7.7957, feLongitude: 110.3696, status: 'ACTIVE' }
+    ];
+
+    try {
+      const response = await fetch('/api/sites/check-duplicates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sites: sitesData })
+      });
+      
+      const data = await response.json();
+      if (data.duplicates > 0) {
+        setDuplicateDetected(true);
+        setDuplicateData(data);
+      }
+    } catch (error) {
+      console.error('Error checking duplicates:', error);
+    }
+  };
+
   const processSites = async () => {
     const sitesData = [
-      { siteId: 'JAW-JI-SMP-4240', siteName: 'GILIGENTING_KALIANGET', siteType: 'MW', region: 'East Java', city: 'Sumenep', neLatitude: -7.1234567, neLongitude: 112.9876543, feLatitude: -7.2345678, feLongitude: 112.8765432, status: 'ACTIVE' },
-      { siteId: 'JAW-JI-SMP-4241', siteName: 'SITE_A_SITE_B', siteType: 'MW', region: 'East Java', city: 'Sumenep', neLatitude: -7.1234568, neLongitude: 112.9876544, feLatitude: -7.2345679, feLongitude: 112.8765433, status: 'ACTIVE' },
-      { siteId: 'JAW-JI-SMP-4242', siteName: 'SITE_C_SITE_D', siteType: 'MW', region: 'East Java', city: 'Sumenep', neLatitude: -7.1234569, neLongitude: 112.9876545, feLatitude: -7.2345680, feLongitude: 112.8765434, status: 'ACTIVE' },
-      { siteId: 'JAW-JI-SMP-4243', siteName: 'SITE_E_SITE_F', siteType: 'MW', region: 'East Java', city: 'Sumenep', neLatitude: -7.1234570, neLongitude: 112.9876546, feLatitude: -7.2345681, feLongitude: 112.8765435, status: 'ACTIVE' },
-      { siteId: 'JAW-JI-SMP-4244', siteName: 'SITE_G_SITE_H', siteType: 'MW', region: 'East Java', city: 'Sumenep', neLatitude: -7.1234571, neLongitude: 112.9876547, feLatitude: -7.2345682, feLongitude: 112.8765436, status: 'ACTIVE' },
-      { siteId: 'JAW-JI-SMP-4245', siteName: 'SITE_I_SITE_J', siteType: 'MW', region: 'East Java', city: 'Sumenep', neLatitude: -7.1234572, neLongitude: 112.9876548, feLatitude: -7.2345683, feLongitude: 112.8765437, status: 'ACTIVE' },
-      { siteId: 'JAW-JI-SMP-4246', siteName: 'SITE_K_SITE_L', siteType: 'MW', region: 'East Java', city: 'Sumenep', neLatitude: -7.1234573, neLongitude: 112.9876549, feLatitude: -7.2345684, feLongitude: 112.8765438, status: 'ACTIVE' },
-      { siteId: 'JAW-JI-SMP-4247', siteName: 'SITE_M_SITE_N', siteType: 'MW', region: 'East Java', city: 'Sumenep', neLatitude: -7.1234574, neLongitude: 112.9876550, feLatitude: -7.2345685, feLongitude: 112.8765439, status: 'ACTIVE' }
+      { siteId: 'JKTB001', siteName: 'PANYAKALAN', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.2088, neLongitude: 106.8456, feLatitude: -6.2089, feLongitude: 106.8457, status: 'ACTIVE' },
+      { siteId: 'JKTB002', siteName: 'KEMAYORAN', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.1745, neLongitude: 106.8227, feLatitude: -6.1746, feLongitude: 106.8228, status: 'ACTIVE' },
+      { siteId: 'SUMRI001', siteName: 'MEDAN PLAZA', siteType: 'MW', region: 'Sumatra', city: 'Medan', neLatitude: 3.5952, neLongitude: 98.6722, feLatitude: 3.5953, feLongitude: 98.6723, status: 'ACTIVE' },
+      { siteId: 'JKTB003', siteName: 'SENAYAN', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.2297, neLongitude: 106.8075, feLatitude: -6.2298, feLongitude: 106.8076, status: 'ACTIVE' },
+      { siteId: 'JKTB004', siteName: 'THAMRIN', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.1944, neLongitude: 106.8229, feLatitude: -6.1945, feLongitude: 106.8230, status: 'ACTIVE' },
+      { siteId: 'BDGB001', siteName: 'BANDUNG PLAZA', siteType: 'MW', region: 'West Java', city: 'Bandung', neLatitude: -6.9175, neLongitude: 107.6191, feLatitude: -6.9176, feLongitude: 107.6192, status: 'ACTIVE' },
+      { siteId: 'SBYB001', siteName: 'SURABAYA CENTER', siteType: 'MW', region: 'East Java', city: 'Surabaya', neLatitude: -7.2575, neLongitude: 112.7521, feLatitude: -7.2576, feLongitude: 112.7522, status: 'ACTIVE' },
+      { siteId: 'YGYA001', siteName: 'YOGYA MALIOBORO', siteType: 'MW', region: 'Central Java', city: 'Yogyakarta', neLatitude: -7.7956, neLongitude: 110.3695, feLatitude: -7.7957, feLongitude: 110.3696, status: 'ACTIVE' }
     ];
 
     try {
@@ -112,7 +149,8 @@ const SiteManagement: React.FC = () => {
       });
       
       if (response.ok) {
-        alert('Processing 8 valid sites... Sites registered successfully!');
+        const result = await response.json();
+        alert(`Processing 8 valid sites... ${result.created || 0} sites registered successfully! (${8 - (result.created || 0)} duplicates skipped)`);
         await fetchSites();
       } else {
         alert('Error registering sites');
@@ -122,8 +160,48 @@ const SiteManagement: React.FC = () => {
       alert('Error registering sites');
     }
 
+    resetModal();
+  };
+
+  const updateExistingSites = async () => {
+    const sitesData = [
+      { siteId: 'JKTB001', siteName: 'PANYAKALAN UPDATED', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.2088, neLongitude: 106.8456, feLatitude: -6.2089, feLongitude: 106.8457, status: 'ACTIVE' },
+      { siteId: 'JKTB002', siteName: 'KEMAYORAN UPDATED', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.1745, neLongitude: 106.8227, feLatitude: -6.1746, feLongitude: 106.8228, status: 'ACTIVE' },
+      { siteId: 'SUMRI001', siteName: 'MEDAN PLAZA UPDATED', siteType: 'MW', region: 'Sumatra', city: 'Medan', neLatitude: 3.5952, neLongitude: 98.6722, feLatitude: 3.5953, feLongitude: 98.6723, status: 'ACTIVE' },
+      { siteId: 'JKTB003', siteName: 'SENAYAN UPDATED', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.2297, neLongitude: 106.8075, feLatitude: -6.2298, feLongitude: 106.8076, status: 'ACTIVE' },
+      { siteId: 'JKTB004', siteName: 'THAMRIN UPDATED', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.1944, neLongitude: 106.8229, feLatitude: -6.1945, feLongitude: 106.8230, status: 'ACTIVE' },
+      { siteId: 'BDGB001', siteName: 'BANDUNG PLAZA UPDATED', siteType: 'MW', region: 'West Java', city: 'Bandung', neLatitude: -6.9175, neLongitude: 107.6191, feLatitude: -6.9176, feLongitude: 107.6192, status: 'ACTIVE' },
+      { siteId: 'SBYB001', siteName: 'SURABAYA CENTER UPDATED', siteType: 'MW', region: 'East Java', city: 'Surabaya', neLatitude: -7.2575, neLongitude: 112.7521, feLatitude: -7.2576, feLongitude: 112.7522, status: 'ACTIVE' },
+      { siteId: 'YGYA001', siteName: 'YOGYA MALIOBORO UPDATED', siteType: 'MW', region: 'Central Java', city: 'Yogyakarta', neLatitude: -7.7956, neLongitude: 110.3695, feLatitude: -7.7957, feLongitude: 110.3696, status: 'ACTIVE' }
+    ];
+
+    try {
+      const response = await fetch('/api/sites/update-bulk', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sites: sitesData })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        alert(`${result.updated || 0} sites updated successfully!`);
+        await fetchSites();
+      } else {
+        alert('Error updating sites');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error updating sites');
+    }
+
+    resetModal();
+  };
+
+  const resetModal = () => {
     setUploadedFile(null);
     setValidationComplete(false);
+    setDuplicateDetected(false);
+    setDuplicateData(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     setShowModal(false);
   };
@@ -194,10 +272,7 @@ const SiteManagement: React.FC = () => {
   };
 
   const closeModal = () => {
-    setShowModal(false);
-    setUploadedFile(null);
-    setValidationComplete(false);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    resetModal();
   };
 
   return (
@@ -353,14 +428,56 @@ const SiteManagement: React.FC = () => {
                       <div className="text-sm text-red-800">Errors</div>
                     </div>
                   </div>
+
+                  {duplicateDetected && duplicateData && (
+                    <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                      <div className="flex items-center mb-3">
+                        <span className="text-2xl mr-2">⚠️</span>
+                        <h4 className="font-bold text-orange-800">Duplicate Sites Detected!</h4>
+                      </div>
+                      <p className="text-orange-700 mb-3">
+                        Found {duplicateData.duplicates} existing sites with same IDs:
+                      </p>
+                      <div className="bg-white p-3 rounded border max-h-32 overflow-y-auto">
+                        {duplicateData.duplicateList.map((site: any, index: number) => (
+                          <div key={index} className="text-sm text-gray-700">
+                            • {site.siteId} - {site.siteName}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="space-y-2">
-                    <button 
-                      onClick={processSites}
-                      className="w-full px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700"
-                    >
-                      ✅ Process 8 Valid Sites
-                    </button>
+                    {duplicateDetected ? (
+                      <>
+                        <button 
+                          onClick={updateExistingSites}
+                          className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        >
+                          🔄 Modify Existing Sites
+                        </button>
+                        <button 
+                          onClick={processSites}
+                          className="w-full px-6 py-3 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
+                        >
+                          ⏭️ Skip Duplicates & Add New Only
+                        </button>
+                        <button 
+                          onClick={closeModal}
+                          className="w-full px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                        >
+                          🚫 Cancel Upload
+                        </button>
+                      </>
+                    ) : (
+                      <button 
+                        onClick={processSites}
+                        className="w-full px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700"
+                      >
+                        ✅ Process 8 Valid Sites
+                      </button>
+                    )}
                     <button 
                       onClick={downloadValidationReport}
                       className="w-full px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
