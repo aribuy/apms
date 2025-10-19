@@ -5,10 +5,14 @@ interface Site {
   id: number;
   site_id: string;
   site_name: string;
-  site_type: string;
+  site_type?: string; // legacy
+  scope: string;
   region: string;
   city: string;
   status: string;
+  atp_required: boolean;
+  atp_type: string;
+  workflow_stage: string;
   created_at: string;
 }
 
@@ -70,12 +74,12 @@ const SiteManagement: React.FC = () => {
   };
 
   const downloadTemplate = () => {
-    const csvContent = `Customer Site ID,Customer Site Name,NE Tower ID,NE Name,FE Tower ID,FE Name,NE Latitude,NE Longitude,FE Latitude,FE Longitude,Region,Coverage Area,Activity Flow,SOW Category,Project Code,Frequency,Capacity,Antenna Size,Equipment Type,Task Type,Priority,Due Date,Task Description\nJAW-JI-SMP-4240_JAW-JI-SMP-3128_Y25_MWU0-04,GILIGENTING BRINGSANG_KALIANGET,JAW-JI-SMP-4240,GILIGENTING BRINGSANG,JAW-JI-SMP-3128,KALIANGET,-7.1234567,112.9876543,-7.2345678,112.8765432,East Java,Sumenep District,13. MW Upg Upgrade N+0 Change Antenna,Upgrade N+0,Y25_MWU0-04,18GHz,1Gbps,0.6m,Aviat CTR8000,ATP,High Priority,2024-01-15,MW Upgrade with antenna change`;
+    const csvContent = `Customer Site ID,Customer Site Name,Customer Site ID (FE),Customer Site Name (FE),NE Latitude,NE Longitude,FE Latitude,FE Longitude,Region,Coverage Area,City,Scope,ATP Required,ATP Type,Activity Flow,SOW Category,Project Code,Frequency,Capacity,Antenna Size,Equipment Type,Status,Scope Description\nSUM-SB-ARS-0834,PANYAKALAN,SUM-SB-ARS-0010,Koto Baru Solok,-0.7654321,100.1234567,-0.654321,100.2345678,Sumatera,Solok District,Solok,MW,true,BOTH,MW Link Upgrade,Upgrade Config 1+0 to 2+0,MWU-2025-A,11GHz,500Mbps,0.3m,NEC IPASOLINK,ACTIVE,Upgrade 1+0 to 2+0 (HW Activity)\nKAL-KB-BEK-0752,JAGOI_BABANG,KAL-KB-BEK-0293,SELUAS_BENGKAYANG,0.8765432,109.9876543,0.7654321,109.8765432,Kalimantan,Bengkayang District,Bengkayang,MW,true,BOTH,MW Link Upgrade,Upgrade Config 1+0 to 2+0,MWU-2025-B,13GHz,500Mbps,0.6m,Huawei RTN,ACTIVE,Upgrade Config 1+0 to 2+0 (HW Activity)\nKAL-KB-BEK-0514,Sanggau Ledo,KAL-KB-BEK-0336,PISAK BENGKAYANG,0.9876543,109.1234567,0.8765432,109.2345678,Kalimantan,Bengkayang District,Bengkayang,MW,true,BOTH,MW Link Upgrade,Upgrade Config 1+0 to 2+0,MWU-2025-C,15GHz,600Mbps,0.3m,Ericsson MINILINK,ACTIVE,Upgrade Config 1+0 to 2+0 (HW Activity)\nSUM-LA-LIW-0465,PEKON LOMBOK,SUM-LA-LIW-0879,A-Sukau,-5.1234567,104.9876543,-5.2345678,104.8765432,Sumatera,Lampung Barat District,Lampung,MW,true,BOTH,MW Link Swap,Swap Upgrade 4+0,MWU-2025-D,18GHz,1Gbps,1.2m,Aviat CTR8000,ACTIVE,Swap Upgrade 4+0 (HW Activity)\nSUM-SU-STB-2449,NAMO SIALANG_LANGKAT,SUM-SU-STB-1948,Sei Serdang LANGKAT Bawah,3.1234567,98.9876543,3.2345678,98.8765432,Sumatera,Langkat District,Langkat,MW,true,BOTH,MW Link Upgrade,Upgrade Config 1+0 to 2+0,MWU-2025-E,7GHz,400Mbps,0.6m,Nokia AirScale,ACTIVE,Upgrade Config 1+0 to 2+0 (HW Activity)\nKAL-KI-TRG-0619,PEDINGIN,KAL-KI-SMR-0338,Road Sanga Sanga,-0.1234567,117.1234567,-0.2345678,117.2345678,Kalimantan,Kutai Kartanegara District,Kutai Kartanegara,MW,true,SOFTWARE,MW Link Upgrade,Upgrade BW 56Mhz,MWU-2025-F,8GHz,700Mbps,0.3m,NEC IPASOLINK,ACTIVE,Upgrade BW 56Mhz (SW Activity)\nKAL-KI-TRG-0769,KARANG TUNGGAL,KAL-KI-TRG-0612,LOA JANAN ILIR,-0.3456789,117.3456789,-0.456789,117.456789,Kalimantan,Kutai Kartanegara District,Kutai Kartanegara,MW,true,SOFTWARE,MW Link Upgrade,Upgrade BW 56Mhz,MWU-2025-G,6GHz,600Mbps,0.6m,Huawei RTN,ACTIVE,Upgrade BW 56Mhz (SW Activity)\nSUL-SN-SKG-1375,SANRESENG ADEBOLA,SUL-SN-WTP-0806,Welado BONE,-4.1234567,120.1234567,-4.2345678,120.2345678,Sulawesi,Bone District,Bone,MW,true,SOFTWARE,MW Link Upgrade,Upgrade Modulation,MWU-2025-H,10GHz,400Mbps,0.3m,Ericsson MINILINK,ACTIVE,Upgrade Modulation (SW Activity)\nSUM-SU-KPI-1160,Perlabian,SUM-SU-KPI-1164,Kota Pinang Road,1.1234567,100.9876543,1.2345678,100.8765432,Sumatera,Labuhanbatu District,Labuhanbatu,MW,true,SOFTWARE,MW Link Upgrade,Upgrade Modulation,MWU-2025-I,13GHz,500Mbps,0.6m,Nokia AirScale,ACTIVE,Upgrade Modulation (SW Activity)\nSUM-SU-KIS-2127,PERKEBUNAN AIR BATUI,SUM-SU-KIS-0166,Aek Teluk Kiri,2.1234567,99.9876543,2.2345678,99.8765432,Sumatera,Asahan District,Asahan,MW,true,SOFTWARE,MW Link Upgrade,Upgrade Modulation,MWU-2025-J,15GHz,600Mbps,0.3m,Aviat CTR8000,ACTIVE,Upgrade Modulation (SW Activity)`;
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'site_registration_template.csv';
+    a.download = 'site_atp_template.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -298,11 +302,12 @@ const SiteManagement: React.FC = () => {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Site ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Site Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scope</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ATP Required</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ATP Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Workflow Stage</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Region</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">City</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
@@ -315,16 +320,30 @@ const SiteManagement: React.FC = () => {
                 <tr key={site.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{site.site_id}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{site.site_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{site.site_type}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{site.scope || site.site_type}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      site.atp_required ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {site.atp_required ? 'Yes' : 'No'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{site.atp_type || 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      site.workflow_stage === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                      site.workflow_stage === 'ATP_PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                      site.workflow_stage === 'ATP_SUBMITTED' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {site.workflow_stage || 'REGISTERED'}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{site.region}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{site.city}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
                       {site.status}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(site.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex space-x-2">

@@ -368,14 +368,25 @@ model tasks {
   parent_task_id                 String?
   task_data                      Json?
   result_data                    Json?
+  workflow_type                  String?   @db.VarChar(20)
+  stage_number                   Int?      @default(1)
+  decision                       String?   @db.VarChar(50)
+  decision_comments              String?
+  depends_on                     String[]
+  sla_deadline                   DateTime? @db.Timestamp(6)
+  updated_at                     DateTime? @default(now()) @db.Timestamp(6)
   users_tasks_assigned_byTousers users?    @relation("tasks_assigned_byTousers", fields: [assigned_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   users_tasks_assigned_toTousers users?    @relation("tasks_assigned_toTousers", fields: [assigned_to], references: [id], onDelete: NoAction, onUpdate: NoAction)
   tasks                          tasks?    @relation("tasksTotasks", fields: [parent_task_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   other_tasks                    tasks[]   @relation("tasksTotasks")
+  sites                          sites?    @relation(fields: [site_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([assigned_to, status], map: "idx_tasks_assigned_status")
   @@index([created_at(sort: Desc)], map: "idx_tasks_created")
   @@index([assigned_role, status], map: "idx_tasks_role_status")
+  @@index([site_id], map: "idx_tasks_site_id")
+  @@index([task_type], map: "idx_tasks_task_type")
+  @@index([workflow_type], map: "idx_tasks_workflow_type")
 }
 
 model templates {
@@ -604,20 +615,27 @@ enum UserType {
 }
 
 model sites {
-  id           String   @id @default(dbgenerated("gen_random_uuid()"))
-  site_id      String   @unique @db.VarChar(100)
-  site_name    String   @db.VarChar(255)
-  site_type    String?  @default("MW") @db.VarChar(50)
-  region       String   @db.VarChar(100)
-  city         String   @db.VarChar(100)
-  ne_latitude  Decimal? @db.Decimal(10, 8)
-  ne_longitude Decimal? @db.Decimal(11, 8)
-  fe_latitude  Decimal? @db.Decimal(10, 8)
-  fe_longitude Decimal? @db.Decimal(11, 8)
-  status       String?  @default("ACTIVE") @db.VarChar(50)
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  id             String   @id @default(dbgenerated("gen_random_uuid()"))
+  site_id        String   @unique @db.VarChar(100)
+  site_name      String   @db.VarChar(255)
+  scope          String?  @default("MW") @db.VarChar(50)
+  region         String   @db.VarChar(100)
+  city           String   @db.VarChar(100)
+  ne_latitude    Decimal? @db.Decimal(10, 8)
+  ne_longitude   Decimal? @db.Decimal(11, 8)
+  fe_latitude    Decimal? @db.Decimal(10, 8)
+  fe_longitude   Decimal? @db.Decimal(11, 8)
+  status         String?  @default("ACTIVE") @db.VarChar(50)
+  atp_required   Boolean? @default(true)
+  atp_type       String?  @default("BOTH") @db.VarChar(20)
+  workflow_stage String?  @default("REGISTERED") @db.VarChar(50)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  tasks          tasks[]
 
   @@index([region])
   @@index([status])
+  @@index([scope])
+  @@index([atp_required])
+  @@index([workflow_stage])
 }

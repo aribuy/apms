@@ -297,12 +297,16 @@ app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/tasks", taskRoutes);
 app.use("/api/v1/projects", documentRoutes);
 app.use("/api/v1/atp", require("./src/routes/atpRoutes"));
-app.use("/api/v1/atp-workflow", require("./src/routes/atpWorkflowRoutes"));
+app.use("/api/v1/atp/workflow", require("./src/routes/atpWorkflowRoutes"));
+app.use("/api/v1/atp/process", require("./src/routes/atpProcessRoutes"));
+app.use("/api/v1/atp", require("./src/routes/atpBulkUploadRoutes"));
+app.use("/api/v1/atp", require("./src/routes/atpUploadRoutes"));
 app.use("/api/v1/documents", require("./src/routes/documentRoutes"));
 app.use("/api/sites", require("./src/routes/sitesRoutes"));
 app.use("/api/v1/sites", require("./src/routes/siteRoutes"));
 app.use("/api/v1/scopes", require("./src/routes/scopeRoutes"));
 app.use("/api/v1/site-registration", require("./src/routes/siteRegistrationRoutes"));
+app.use("/api/v1/tasks/history", require("./src/routes/taskHistoryRoutes"));
 
 // 404 handler
 app.use((req, res) => {

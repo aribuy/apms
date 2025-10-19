@@ -235,13 +235,25 @@ router.post('/api/register', async (req, res) => {
   }
 });
 
-// Get all sites
+// Get all sites with ATP filtering
 router.get('/', async (req, res) => {
   try {
+    const { atp_required, workflow_stage } = req.query;
+    
+    const where = {};
+    if (atp_required === 'true') {
+      where.atp_required = true;
+    }
+    if (workflow_stage) {
+      where.workflow_stage = workflow_stage;
+    }
+    
     const sites = await prisma.sites.findMany({
-      orderBy: { createdAt: 'desc' }
+      where,
+      orderBy: { created_at: 'desc' }
     });
-    res.json(sites);
+    
+    res.json({ success: true, data: sites });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

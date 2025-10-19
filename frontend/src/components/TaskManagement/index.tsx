@@ -1,22 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ListTodo, Clock, FileText } from 'lucide-react';
 import TaskList from './TaskList';
-import ATPManagement from '../ATPManagement';
 
 const TaskManagement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'pending' | 'all' | 'atp'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending');
 
-  useEffect(() => {
-    const handleSwitchToATP = () => {
-      setActiveTab('atp');
-    };
-    
-    window.addEventListener('switchToATPTab', handleSwitchToATP);
-    
-    return () => {
-      window.removeEventListener('switchToATPTab', handleSwitchToATP);
-    };
-  }, []);
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -50,28 +39,14 @@ const TaskManagement: React.FC = () => {
                 <ListTodo className="w-4 h-4" />
                 All Tasks
               </button>
-              <button
-                onClick={() => setActiveTab('atp')}
-                className={`py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                  activeTab === 'atp'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <FileText className="w-4 h-4" />
-                E-ATP
-              </button>
+
             </nav>
           </div>
         </div>
       </div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'atp' ? (
-          <ATPManagement />
-        ) : (
-          <TaskList viewType={activeTab} />
-        )}
+        <TaskList viewType={activeTab} />
       </div>
     </div>
   );

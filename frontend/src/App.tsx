@@ -7,8 +7,9 @@ import DocumentManagement from "./components/DocumentManagement/DocumentManageme
 import TaskManagement from "./components/TaskManagement";
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import ATPManagement from "./components/ATPManagement";
+
 import SiteManagement from "./components/SiteManagement";
+import ATPTest from "./components/ATPTest";
 import { LoginPage } from './components/auth/LoginPage';
 import { 
   Users, Database, FileText, MapPin, BarChart3, Settings,
@@ -145,7 +146,7 @@ const TeleCoreHomepage: React.FC = () => {
       subModules: [
         'All Tasks',
         'Pending Tasks',
-        'E-ATP',
+        'ATP Workflow',
         'Punchlist Tasks'
       ]
     },
@@ -652,13 +653,19 @@ const TeleCoreHomepage: React.FC = () => {
                       </div>
                     </button>
 
-                    <button className="w-full flex items-center space-x-3 p-3 text-left rounded-lg hover:bg-gray-50 transition-colors">
+                    <button 
+                      onClick={() => {
+                        setActiveModule('atp-test');
+                        localStorage.setItem('activeModule', 'atp-test');
+                      }}
+                      className="w-full flex items-center space-x-3 p-3 text-left rounded-lg hover:bg-gray-50 transition-colors"
+                    >
                       <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
                         <BarChart3 className="w-4 h-4 text-orange-600" />
                       </div>
                       <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-900">View Reports</div>
-                        <div className="text-xs text-gray-600">System analytics</div>
+                        <div className="text-sm font-medium text-gray-900">ATP Test Dashboard</div>
+                        <div className="text-xs text-gray-600">Test ATP system</div>
                       </div>
                     </button>
                   </div>
@@ -692,6 +699,8 @@ const TeleCoreHomepage: React.FC = () => {
                   <DocumentManagement />
                 ) : activeModule === "site-management" ? (
                   <SiteManagement />
+                ) : activeModule === "atp-test" ? (
+                  <ATPTest />
                 ) : (
                   <div className="text-center py-12 bg-white rounded-lg shadow-sm">
                     <div className="text-gray-500 mb-4">Module under development</div>
