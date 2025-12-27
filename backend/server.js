@@ -19,9 +19,13 @@ app.use(cors());
 app.use(morgan('combined'));
 app.use(express.json());
 
+// Serve uploaded files
+app.use('/uploads', express.static('uploads'));
+
 // Test users data - ATP Process Flow
 const testUsers = [
   { id: '1', email: 'admin@aviat.com', username: 'admin', name: 'System Administrator', role: 'admin', status: 'ACTIVE', userType: 'INTERNAL' },
+  { id: '1a', email: 'admin@apms.com', username: 'admin', name: 'APMS Administrator', role: 'Administrator', status: 'ACTIVE', userType: 'INTERNAL' },
   { id: '2', email: 'doc.control@aviat.com', username: 'doc.control', name: 'Document Control', role: 'DOC_CONTROL', status: 'ACTIVE', userType: 'INTERNAL' },
   { id: '3', email: 'business.ops@xlsmart.co.id', username: 'business.ops', name: 'Business Operations', role: 'BO', status: 'ACTIVE', userType: 'CUSTOMER' },
   { id: '4', email: 'sme.team@xlsmart.co.id', username: 'sme.team', name: 'SME Team', role: 'SME', status: 'ACTIVE', userType: 'CUSTOMER' },
@@ -41,6 +45,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
   const testCredentials = {
     // PT Aviat (Internal)
     'admin@aviat.com': 'Admin123!',
+    'admin@apms.com': 'Admin123!',
     'doc.control@aviat.com': 'test123',
     
     // PT XLSMART (Customer Approvers)
@@ -66,7 +71,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
           id: 'user-' + Date.now(),
           email: email,
           username: email.split('@')[0],
-          role: email === 'admin@aviat.com' ? 'admin' :
+          role: (email === 'admin@aviat.com' || email === 'admin@apms.com') ? 'Administrator' :
                 email.includes('doc.control') ? 'DOC_CONTROL' :
                 email.includes('business.ops') ? 'BO' :
                 email.includes('sme.team') ? 'SME' :
@@ -180,6 +185,8 @@ let permissionMappings = [
   { roleId: 'admin', moduleId: 'site-management', canAccess: true },
   { roleId: 'admin', moduleId: 'task-management', canAccess: true },
   { roleId: 'admin', moduleId: 'document-management', canAccess: true },
+  { roleId: 'admin', moduleId: 'atp-template-management', canAccess: true },
+  { roleId: 'admin', moduleId: 'atp-process-management', canAccess: true },
   { roleId: 'admin', moduleId: 'bom-management', canAccess: true },
   { roleId: 'admin', moduleId: 'master-data', canAccess: true },
   { roleId: 'admin', moduleId: 'system-admin', canAccess: true },
@@ -297,16 +304,18 @@ app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/tasks", taskRoutes);
 app.use("/api/v1/projects", documentRoutes);
 app.use("/api/v1/atp", require("./src/routes/atpRoutes"));
-app.use("/api/v1/atp/workflow", require("./src/routes/atpWorkflowRoutes"));
-app.use("/api/v1/atp/process", require("./src/routes/atpProcessRoutes"));
-app.use("/api/v1/atp", require("./src/routes/atpBulkUploadRoutes"));
 app.use("/api/v1/atp", require("./src/routes/atpUploadRoutes"));
+app.use("/api/v1/atp", require("./src/routes/atpBulkUploadRoutes"));
+app.use("/api/v1/atp-workflow", require("./src/routes/atpWorkflowRoutes"));
+app.use("/api/v1/atp-templates", require("./src/routes/atpTemplateRoutes"));
+app.use("/api/v1/upload", require("./src/routes/uploadRoutes"));
 app.use("/api/v1/documents", require("./src/routes/documentRoutes"));
 app.use("/api/sites", require("./src/routes/sitesRoutes"));
 app.use("/api/v1/sites", require("./src/routes/siteRoutes"));
 app.use("/api/v1/scopes", require("./src/routes/scopeRoutes"));
 app.use("/api/v1/site-registration", require("./src/routes/siteRegistrationRoutes"));
 app.use("/api/v1/tasks/history", require("./src/routes/taskHistoryRoutes"));
+app.use("/api/v1/atp-generator", require("./src/routes/atpDocumentGeneratorRoutes"));
 
 // 404 handler
 app.use((req, res) => {
@@ -322,7 +331,6 @@ process.on('SIGINT', async () => {
 
 
 
-// ATP routes
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`AMPS API server running on localhost:${PORT}`);

@@ -81,10 +81,20 @@ export const LoginPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="mt-4 text-xs text-gray-500 text-center">
-            <p>Test Credentials:</p>
-            <p>Email: admin@apms.com</p>
-            <p>Password: Admin123!</p>
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">Test Credentials:</h4>
+            <div className="space-y-2 text-xs text-gray-600">
+              <div><strong>Admin:</strong> admin@aviat.com / Admin123!</div>
+              <div><strong>Document Control:</strong> doc.control@aviat.com / test123</div>
+              <div><strong>Business Ops:</strong> business.ops@xlsmart.co.id / test123</div>
+              <div><strong>SME Team:</strong> sme.team@xlsmart.co.id / test123</div>
+              <div><strong>NOC Head:</strong> noc.head@xlsmart.co.id / test123</div>
+              <div><strong>FOP RTS:</strong> fop.rts@xlsmart.co.id / test123</div>
+              <div><strong>Region Team:</strong> region.team@xlsmart.co.id / test123</div>
+              <div><strong>RTH Head:</strong> rth.head@xlsmart.co.id / test123</div>
+              <div><strong>ZTE Vendor:</strong> vendor.zte@gmail.com / test123</div>
+              <div><strong>HTI Vendor:</strong> vendor.hti@gmail.com / test123</div>
+            </div>
           </div>
         </form>
       </div>

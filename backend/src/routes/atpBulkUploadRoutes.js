@@ -20,7 +20,14 @@ const storage = multer.diskStorage({
     const timestamp = Date.now();
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${timestamp}${ext}`);
+    
+    // Extract site ID from filename or use original name
+    const siteIdMatch = name.match(/^([A-Z0-9-]+)/);
+    const siteId = siteIdMatch ? siteIdMatch[1] : 'UNKNOWN';
+    const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    const filename = `AVIAT_ATP_HW_${siteId}_${timestamp}_MCO-T_${randomCode}${ext}`;
+    cb(null, filename);
   }
 });
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, CheckCircle, AlertCircle, ArrowRight, Upload, FileText, Search } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, ArrowRight, Upload, FileText, Search, Eye, Send } from 'lucide-react';
 
 interface Task {
   id: string;
@@ -32,6 +32,9 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [uploadedDocument, setUploadedDocument] = useState<string | null>(null);
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewDocumentPath, setViewDocumentPath] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTasks();
@@ -120,10 +123,27 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
     const file = event.target.files?.[0];
     if (!file || !selectedTask) return;
 
+    // Extract site_id properly
+    let siteId = selectedTask.sites?.site_id;
+    if (!siteId && selectedTask.task_code) {
+      // Extract from task_code format: TSK-SITEID-NUM
+      const parts = selectedTask.task_code.split('-');
+      if (parts.length >= 2) {
+        siteId = parts[1];
+      }
+    }
+    if (!siteId) siteId = 'UNKNOWN';
+
+    console.log('Upload data:', {
+      task_code: selectedTask.task_code,
+      site_id: siteId,
+      filename: file.name
+    });
+
     const formData = new FormData();
     formData.append('document', file);
     formData.append('task_code', selectedTask.task_code);
-    formData.append('site_id', selectedTask.sites?.site_id || '');
+    formData.append('site_id', siteId);
 
     try {
       const response = await fetch('http://localhost:3011/api/v1/atp/upload', {
@@ -134,8 +154,20 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
       if (response.ok) {
         const data = await response.json();
         setUploadedDocument(data.document_path);
+        
+        // Update task status to in_progress after upload
+        await fetch(`http://localhost:3011/api/v1/tasks/${selectedTask.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'in_progress' })
+        });
+        
         alert('ATP document uploaded successfully!');
         fetchTasks();
+      } else {
+        const error = await response.json();
+        console.error('Upload error:', error);
+        alert('Failed to upload document: ' + error.message);
       }
     } catch (error) {
       console.error('Error uploading document:', error);
@@ -143,24 +175,24 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
     }
   };
 
-  const completeTask = async () => {
+  const submitTask = async () => {
     if (!selectedTask) return;
 
     try {
       const response = await fetch(`http://localhost:3011/api/v1/tasks/${selectedTask.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'completed' })
+        body: JSON.stringify({ status: 'submitted' })
       });
       
       if (response.ok) {
-        alert('Task completed successfully!');
+        alert('Task submitted for approval!');
         setShowUploadModal(false);
         fetchTasks();
       }
     } catch (error) {
-      console.error('Error completing task:', error);
-      alert('Failed to complete task');
+      console.error('Error submitting task:', error);
+      alert('Failed to submit task');
     }
   };
 
@@ -205,6 +237,66 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
     } catch (error) {
       console.error('Error uploading documents:', error);
       alert('Failed to upload documents');
+    }
+  };
+
+  const handleSelectTask = (taskId: string) => {
+    const newSelected = new Set(selectedTasks);
+    if (newSelected.has(taskId)) {
+      newSelected.delete(taskId);
+    } else {
+      newSelected.add(taskId);
+    }
+    setSelectedTasks(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    const selectableTasks = paginatedTasks.filter(task => 
+      task.status === 'in_progress' // Only tasks with uploaded documents that can be submitted
+    );
+    
+    if (selectedTasks.size === selectableTasks.length && selectableTasks.length > 0) {
+      setSelectedTasks(new Set());
+    } else {
+      setSelectedTasks(new Set(selectableTasks.map(t => t.id)));
+    }
+  };
+
+  const handleBulkSubmit = async () => {
+    if (selectedTasks.size === 0) return;
+
+    try {
+      const promises = Array.from(selectedTasks).map(taskId =>
+        fetch(`http://localhost:3011/api/v1/tasks/${taskId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'submitted' })
+        })
+      );
+
+      await Promise.all(promises);
+      alert(`${selectedTasks.size} tasks submitted for approval!`);
+      setSelectedTasks(new Set());
+      fetchTasks();
+    } catch (error) {
+      console.error('Error bulk submitting:', error);
+      alert('Failed to submit tasks');
+    }
+  };
+
+  const viewDocument = async (task: Task) => {
+    try {
+      const response = await fetch(`http://localhost:3011/api/v1/atp/document/${task.task_code}`);
+      if (response.ok) {
+        const data = await response.json();
+        setViewDocumentPath(data.document_path);
+        setShowViewModal(true);
+      } else {
+        alert('No document found for this task');
+      }
+    } catch (error) {
+      console.error('Error fetching document:', error);
+      alert('Failed to load document');
     }
   };
 
@@ -254,78 +346,139 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
           </div>
         </div>
 
+        {/* Bulk Actions */}
+        {selectedTasks.size > 0 && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+            <span className="text-sm text-blue-800">
+              {selectedTasks.size} task(s) selected
+            </span>
+            <button
+              onClick={handleBulkSubmit}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
+            >
+              <Send className="w-4 h-4" />
+              Submit Selected
+            </button>
+          </div>
+        )}
+
         {/* Tasks Table */}
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="w-full">
+          <table className="w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Code</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ATP Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Site ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Site Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12">
+                  <input
+                    type="checkbox"
+                    checked={selectedTasks.size > 0 && selectedTasks.size === paginatedTasks.filter(t => t.status === 'in_progress').length}
+                    onChange={handleSelectAll}
+                    className="rounded"
+                    disabled={paginatedTasks.filter(t => t.status === 'in_progress').length === 0}
+                  />
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">Task Code</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-40">Task & Site Info</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-20">Type</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-20">Priority</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">Status</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">Created</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedTasks.map((task) => (
                 <tr key={task.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td className="px-3 py-3">
+                    {(task.status === 'in_progress' || task.status === 'submitted') && (
+                      <input
+                        type="checkbox"
+                        checked={selectedTasks.has(task.id)}
+                        onChange={() => handleSelectTask(task.id)}
+                        className="rounded"
+                        disabled={task.status === 'submitted'}
+                      />
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-sm font-mono text-gray-900">
                     {task.task_code}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    <div className="font-medium">ATP Document Upload</div>
+                  <td className="px-3 py-3 text-sm">
+                    <div className="font-medium text-gray-900">ATP Document Upload</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      <span className="font-medium">{task.sites?.site_id || task.task_code?.split('-')[1]}</span>
+                      {' - '}
+                      <span>{task.sites?.site_name || task.title?.replace('ATP Document Upload - ', '') || '-'}</span>
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded text-xs ${
+                  <td className="px-3 py-3">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
                       task.task_type === 'ATP_SOFTWARE' ? 'bg-blue-100 text-blue-800' :
                       task.task_type === 'ATP_HARDWARE' ? 'bg-green-100 text-green-800' :
                       'bg-purple-100 text-purple-800'
                     }`}>
-                      {task.task_type === 'ATP_SOFTWARE' ? 'Software' : 
-                       task.task_type === 'ATP_HARDWARE' ? 'Hardware' : 'ATP'}
+                      {task.task_type === 'ATP_SOFTWARE' ? 'SW' : 
+                       task.task_type === 'ATP_HARDWARE' ? 'HW' : 'ATP'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {task.sites?.site_id || task.task_code?.split('-')[1] || '-'}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {task.sites?.site_name || task.title?.replace('ATP Document Upload - ', '') || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded text-xs ${
+                  <td className="px-3 py-3">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
                       task.priority === 'high' ? 'bg-red-100 text-red-800' :
                       task.priority === 'normal' ? 'bg-blue-100 text-blue-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {task.priority}
+                      {task.priority === 'high' ? 'H' : task.priority === 'normal' ? 'N' : 'L'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded text-xs ${
+                  <td className="px-3 py-3">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
                       task.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                       task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                      task.status === 'submitted' ? 'bg-purple-100 text-purple-800' :
                       task.status === 'completed' ? 'bg-green-100 text-green-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {task.status.replace('_', ' ')}
+                      {task.status === 'pending' ? 'Pending' :
+                       task.status === 'in_progress' ? 'Progress' :
+                       task.status === 'submitted' ? 'Submitted' :
+                       task.status === 'completed' ? 'Done' : task.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(task.created_at).toLocaleDateString()}
+                  <td className="px-3 py-3 text-xs text-gray-500">
+                    {new Date(task.created_at).toLocaleDateString('en-GB', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: '2-digit'
+                    })}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {task.status === 'pending' && (
-                      <button
-                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-1 text-xs"
-                        onClick={() => handlePerformTask(task)}
-                      >
-                        <ArrowRight className="w-3 h-3" />Perform
-                      </button>
-                    )}
+                  <td className="px-3 py-3">
+                    <div className="flex gap-1">
+                      {task.status === 'pending' && (
+                        <button
+                          className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs font-medium"
+                          onClick={() => handlePerformTask(task)}
+                        >
+                          Perform
+                        </button>
+                      )}
+                      {task.status === 'in_progress' && (
+                        <>
+                          <button
+                            className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs font-medium flex items-center gap-1"
+                            onClick={() => viewDocument(task)}
+                          >
+                            <Eye className="w-3 h-3" />
+                            View
+                          </button>
+                          <button
+                            className="px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs font-medium flex items-center gap-1"
+                            onClick={() => handlePerformTask(task)}
+                          >
+                            <Send className="w-3 h-3" />
+                            Submit
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -431,13 +584,63 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
                 Cancel
               </button>
               {uploadedDocument && (
-                <button
-                  onClick={completeTask}
-                  className="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                >
-                  Complete Task
-                </button>
+                <>
+                  <button
+                    onClick={() => window.open(`http://localhost:3011/${uploadedDocument}`, '_blank')}
+                    className="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Preview Document
+                  </button>
+                  <button
+                    onClick={submitTask}
+                    className="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    Submit for Approval
+                  </button>
+                </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Document Modal */}
+      {showViewModal && viewDocumentPath && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Document Preview</h3>
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="h-96 border border-gray-300 rounded overflow-hidden">
+              <iframe
+                src={`http://localhost:3011/${viewDocumentPath}`}
+                className="w-full h-full"
+                title="Document Preview"
+              />
+            </div>
+            
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => window.open(`http://localhost:3011/${viewDocumentPath}`, '_blank')}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Open in New Tab
+              </button>
             </div>
           </div>
         </div>

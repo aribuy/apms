@@ -4,6 +4,7 @@ import UserManagement from './components/UserManagement/UserManagement';
 import OrganizationManagement from "./components/OrganizationManagement/OrganizationManagement";
 import WorkgroupManagement from "./components/WorkgroupManagement/WorkgroupManagement";
 import DocumentManagement from "./components/DocumentManagement/DocumentManagement";
+import ATPDocumentGenerator from "./components/DocumentManagement/ATPDocumentGenerator";
 import TaskManagement from "./components/TaskManagement";
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -14,8 +15,11 @@ import { LoginPage } from './components/auth/LoginPage';
 import { 
   Users, Database, FileText, MapPin, BarChart3, Settings,
   Bell, Search, Menu, X, Home, User, Globe, Workflow, 
-  TrendingUp, Clock, Plus, Package, Activity, LogOut, ListTodo
+  TrendingUp, Clock, Plus, Package, Activity, LogOut, ListTodo,
+  CheckSquare
 } from 'lucide-react';
+import ATPTemplateManagement from './components/ATPTemplateManagement/ATPTemplateManagement';
+import ATPManagement from './components/ATPManagement/ATPManagement';
 import { usePermissions } from './hooks/usePermissions';
 import './App.css';
 
@@ -193,6 +197,34 @@ const TeleCoreHomepage: React.FC = () => {
       ]
     },
     {
+      id: 'atp-template-management',
+      name: 'ATP Checklist Templates',
+      icon: CheckSquare,
+      description: 'Manage ATP checklist templates with photo upload',
+      color: 'bg-cyan-500',
+      subModules: [
+        'Template Library',
+        'Template Builder',
+        'Photo Upload System',
+        'Template Preview',
+        'Template Cloning'
+      ]
+    },
+    {
+      id: 'atp-process-management',
+      name: 'ATP Process Management',
+      icon: Workflow,
+      description: 'Upload ATP documents and manage approval workflow',
+      color: 'bg-emerald-500',
+      subModules: [
+        'Document Upload',
+        'Document Review',
+        'Approval Workflow',
+        'Status Tracking',
+        'Submit for Approval'
+      ]
+    },
+    {
       id: 'master-data',
       name: 'Master Data',
       icon: Database,
@@ -238,7 +270,8 @@ const TeleCoreHomepage: React.FC = () => {
 
   // Filter modules based on user permissions
   const accessibleModules = getAccessibleModules();
-  const modules = accessibleModules === 'all' ? allModules : 
+  const isAdmin = user?.role === 'admin' || user?.role === 'Administrator';
+  const modules = isAdmin ? allModules : 
     allModules.filter(module => 
       module.id === 'dashboard' || 
       (module.id === 'site-management' && accessibleModules.includes('sites')) ||
@@ -671,6 +704,39 @@ const TeleCoreHomepage: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Test Credentials Section */}
+              <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-100">
+                <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-4">Available Test Accounts</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-gray-700">PT Aviat (Internal)</h4>
+                    <div className="space-y-1 text-gray-600">
+                      <div><strong>Admin:</strong> admin@aviat.com / Admin123!</div>
+                      <div><strong>Doc Control:</strong> doc.control@aviat.com / test123</div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-gray-700">PT XLSMART (Customer)</h4>
+                    <div className="space-y-1 text-gray-600">
+                      <div><strong>Business Ops:</strong> business.ops@xlsmart.co.id / test123</div>
+                      <div><strong>SME Team:</strong> sme.team@xlsmart.co.id / test123</div>
+                      <div><strong>NOC Head:</strong> noc.head@xlsmart.co.id / test123</div>
+                      <div><strong>FOP RTS:</strong> fop.rts@xlsmart.co.id / test123</div>
+                      <div><strong>Region Team:</strong> region.team@xlsmart.co.id / test123</div>
+                      <div><strong>RTH Head:</strong> rth.head@xlsmart.co.id / test123</div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-gray-700">External Vendors</h4>
+                    <div className="space-y-1 text-gray-600">
+                      <div><strong>ZTE Vendor:</strong> vendor.zte@gmail.com / test123</div>
+                      <div><strong>HTI Vendor:</strong> vendor.hti@gmail.com / test123</div>
+                      <div><strong>MW Vendor:</strong> mw.vendor@gmail.com / test123</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             // Sub-Module Content
@@ -701,6 +767,10 @@ const TeleCoreHomepage: React.FC = () => {
                   <SiteManagement />
                 ) : activeModule === "atp-test" ? (
                   <ATPTest />
+                ) : activeModule === "atp-template-management" ? (
+                  <ATPTemplateManagement />
+                ) : activeModule === "atp-process-management" ? (
+                  <ATPManagement />
                 ) : (
                   <div className="text-center py-12 bg-white rounded-lg shadow-sm">
                     <div className="text-gray-500 mb-4">Module under development</div>

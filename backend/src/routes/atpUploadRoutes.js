@@ -17,10 +17,15 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const { task_code } = req.body;
+    const { task_code, site_id } = req.body;
     const timestamp = Date.now();
     const ext = path.extname(file.originalname);
-    cb(null, `${task_code}_${timestamp}${ext}`);
+    
+    // Generate standard filename: AVIAT_ATP_HW_SITEID_TIMESTAMP_MCO-T_XXXX
+    const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const filename = `AVIAT_ATP_HW_${site_id}_${timestamp}_MCO-T_${randomCode}${ext}`;
+    
+    cb(null, filename);
   }
 });
 
@@ -44,6 +49,9 @@ router.post('/upload', upload.single('document'), async (req, res) => {
     const { task_code, site_id } = req.body;
     const file = req.file;
 
+    console.log('Upload request body:', req.body);
+    console.log('File info:', file ? { filename: file.filename, originalname: file.originalname } : 'No file');
+
     if (!file) {
       return res.status(400).json({
         success: false,
@@ -63,13 +71,12 @@ router.post('/upload', upload.single('document'), async (req, res) => {
       });
     }
 
-    // Create document record (if you have documents table)
-    // For now, just update task with document path
+    // Update task with document path
     await prisma.tasks.update({
       where: { id: task.id },
       data: {
         result_data: {
-          document_path: file.path,
+          document_path: `uploads/atp-documents/${file.filename}`,
           original_name: file.originalname,
           uploaded_at: new Date().toISOString()
         }
@@ -79,7 +86,7 @@ router.post('/upload', upload.single('document'), async (req, res) => {
     res.json({
       success: true,
       message: 'Document uploaded successfully',
-      document_path: file.filename,
+      document_path: `uploads/atp-documents/${file.filename}`,
       task_code
     });
 

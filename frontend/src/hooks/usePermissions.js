@@ -68,13 +68,13 @@ export const usePermissions = () => {
   };
 
   const hasModuleAccess = (module) => {
-    if (userRole === 'admin') return true;
+    if (userRole === 'admin' || userRole === 'Administrator') return true;
     const permissions = ATP_PERMISSIONS[userRole];
     return permissions?.modules?.includes(module) || false;
   };
 
   const getAccessibleModules = () => {
-    if (userRole === 'admin') return 'all';
+    if (userRole === 'admin' || userRole === 'Administrator') return 'all';
     const permissions = ATP_PERMISSIONS[userRole];
     return permissions?.modules || [];
   };

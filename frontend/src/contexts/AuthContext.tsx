@@ -4,7 +4,7 @@ import { apiClient } from '../utils/apiClient';
 interface User {
   id: string;
   email: string;
-  role: 'admin' | 'user';
+  role: string;
   username: string;
 }
 

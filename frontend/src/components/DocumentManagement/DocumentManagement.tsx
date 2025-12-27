@@ -3,8 +3,10 @@ import { Project } from './types';
 import ProjectList from './ProjectList';
 import ProjectForm from './ProjectForm';
 import ProjectDetails from './ProjectDetails';
+import ATPDocumentGenerator from './ATPDocumentGenerator';
+import { FileText, Plus } from 'lucide-react';
 
-type ViewType = 'list' | 'form' | 'details';
+type ViewType = 'list' | 'form' | 'details' | 'atp-generator';
 
 const DocumentManagement: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewType>('list');
@@ -41,11 +43,29 @@ const DocumentManagement: React.FC = () => {
   return (
     <div className="p-4 sm:p-6">
       {currentView === 'list' && (
-        <ProjectList 
-          onCreateProject={handleCreateProject}
-          onEditProject={handleEditProject}
-          onViewProject={handleViewProject}
-        />
+        <div>
+          <div className="mb-6 flex flex-col sm:flex-row gap-4">
+            <button
+              onClick={handleCreateProject}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center"
+            >
+              <Plus className="mr-2" size={16} />
+              Create Project
+            </button>
+            <button
+              onClick={() => setCurrentView('atp-generator')}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center"
+            >
+              <FileText className="mr-2" size={16} />
+              ATP Document Generator
+            </button>
+          </div>
+          <ProjectList 
+            onCreateProject={handleCreateProject}
+            onEditProject={handleEditProject}
+            onViewProject={handleViewProject}
+          />
+        </div>
       )}
       
       {currentView === 'form' && (
@@ -62,6 +82,18 @@ const DocumentManagement: React.FC = () => {
           onBack={handleBackToList}
           onEdit={handleEditProject}
         />
+      )}
+      
+      {currentView === 'atp-generator' && (
+        <div>
+          <button
+            onClick={handleBackToList}
+            className="mb-4 text-blue-600 hover:text-blue-700 flex items-center"
+          >
+            ← Back to Document Management
+          </button>
+          <ATPDocumentGenerator />
+        </div>
       )}
     </div>
   );
