@@ -3,7 +3,17 @@
   "version": "1.0.0",
   "main": "test-eatp.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm run test:unit && npm run test:integration && npm run test:e2e",
+    "test:unit": "cd backend && npm test -- --testPathPattern=unit",
+    "test:integration": "cd backend && npm test -- --testPathPattern=integration",
+    "test:e2e": "cd frontend && npx playwright test",
+    "test:ci": "npm run test:unit && npm run test:integration",
+    "test:watch": "cd backend && npm test -- --watch",
+    "test:coverage": "cd backend && npm test -- --coverage",
+    "test:e2e:ui": "cd frontend && npx playwright test --ui",
+    "test:e2e:debug": "cd frontend && npx playwright test --debug",
+    "test:e2e:headed": "cd frontend && npx playwright test --headed",
+    "test:report": "cd frontend && npx playwright show-report"
   },
   "keywords": [],
   "author": "",
