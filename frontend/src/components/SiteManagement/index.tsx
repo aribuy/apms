@@ -2,18 +2,19 @@ import React, { useState, useRef } from 'react';
 import { Upload, Download, Plus, X } from 'lucide-react';
 
 interface Site {
-  id: number;
-  site_id: string;
-  site_name: string;
+  id: string;
+  siteId: string;
+  siteName: string;
   site_type?: string; // legacy
   scope: string;
   region: string;
   city: string;
   status: string;
-  atp_required: boolean;
-  atp_type: string;
-  workflow_stage: string;
-  created_at: string;
+  atpRequired: boolean;
+  atpType: string;
+  workflowStage: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 const SiteManagement: React.FC = () => {
@@ -236,7 +237,7 @@ const SiteManagement: React.FC = () => {
     setShowSiteModal(true);
   };
 
-  const deleteSite = async (siteId: number) => {
+  const deleteSite = async (siteId: string) => {
     if (window.confirm('Are you sure you want to delete this site?')) {
       try {
         const response = await fetch(`/api/sites/${siteId}`, {
@@ -318,25 +319,25 @@ const SiteManagement: React.FC = () => {
                 </tr>
               ) : sites.map((site) => (
                 <tr key={site.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{site.site_id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{site.site_name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{site.siteId}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{site.siteName}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{site.scope || site.site_type}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs rounded-full ${
-                      site.atp_required ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      site.atpRequired ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {site.atp_required ? 'Yes' : 'No'}
+                      {site.atpRequired ? 'Yes' : 'No'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{site.atp_type || 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{site.atpType || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs rounded-full ${
-                      site.workflow_stage === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                      site.workflow_stage === 'ATP_PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                      site.workflow_stage === 'ATP_SUBMITTED' ? 'bg-blue-100 text-blue-800' :
+                      site.workflowStage === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                      site.workflowStage === 'ATP_PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                      site.workflowStage === 'ATP_SUBMITTED' ? 'bg-blue-100 text-blue-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {site.workflow_stage || 'REGISTERED'}
+                      {site.workflowStage || 'REGISTERED'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{site.region}</td>

@@ -15,8 +15,8 @@ try {
 router.get('/', async (req, res) => {
   try {
     console.log('Fetching sites from database...');
-    const sites = await prisma.sites.findMany({
-      orderBy: { created_at: 'desc' }
+    const sites = await prisma.site.findMany({
+      orderBy: { createdAt: 'desc' }
     });
     console.log('Found sites:', sites.length);
     res.json(sites);
@@ -29,22 +29,22 @@ router.get('/', async (req, res) => {
 // Check for duplicate sites
 router.post('/check-duplicates', async (req, res) => {
   const { sites } = req.body;
-  
+
   if (!sites || !Array.isArray(sites)) {
     return res.status(400).json({ error: 'Sites array is required' });
   }
-  
+
   try {
     const siteIds = sites.map(site => site.siteId);
-    const existingSites = await prisma.sites.findMany({
+    const existingSites = await prisma.site.findMany({
       where: {
-        site_id: { in: siteIds }
+        siteId: { in: siteIds }
       }
     });
-    
-    const duplicateIds = existingSites.map(site => site.site_id);
+
+    const duplicateIds = existingSites.map(site => site.siteId);
     const duplicateSites = sites.filter(site => duplicateIds.includes(site.siteId));
-    
+
     res.json({
       duplicates: duplicateSites.length,
       duplicateList: duplicateSites,
@@ -59,24 +59,24 @@ router.post('/check-duplicates', async (req, res) => {
 // Update existing sites (bulk)
 router.put('/update-bulk', async (req, res) => {
   const { sites } = req.body;
-  
+
   try {
     let updatedCount = 0;
-    
+
     for (const site of sites) {
-      await prisma.sites.updateMany({
-        where: { site_id: site.siteId },
+      await prisma.site.updateMany({
+        where: { siteId: site.siteId },
         data: {
-          site_name: site.siteName,
+          siteName: site.siteName,
           region: site.region,
           city: site.city,
-          updated_at: new Date()
+          updatedAt: new Date()
         }
       });
       updatedCount++;
     }
-    
-    res.json({ 
+
+    res.json({
       message: `${updatedCount} sites updated successfully`,
       updated: updatedCount
     });
@@ -89,33 +89,33 @@ router.put('/update-bulk', async (req, res) => {
 // Create multiple sites (bulk)
 router.post('/bulk', async (req, res) => {
   const { sites } = req.body;
-  
+
   if (!sites || !Array.isArray(sites)) {
     return res.status(400).json({ error: 'Sites array is required' });
   }
-  
+
   try {
-    const createdSites = await prisma.sites.createMany({
+    const createdSites = await prisma.site.createMany({
       data: sites.map(site => ({
         id: require('crypto').randomUUID(),
-        site_id: site.siteId,
-        site_name: site.siteName,
+        siteId: site.siteId,
+        siteName: site.siteName,
         scope: site.siteType || 'MW',
-        atp_required: true,
-        atp_type: 'BOTH',
-        workflow_stage: 'REGISTERED',
+        atpRequired: true,
+        atpType: 'BOTH',
+        workflowStage: 'REGISTERED',
         region: site.region,
         city: site.city,
-        ne_latitude: site.neLatitude,
-        ne_longitude: site.neLongitude,
-        fe_latitude: site.feLatitude,
-        fe_longitude: site.feLongitude,
+        neLatitude: site.neLatitude,
+        neLongitude: site.neLongitude,
+        feLatitude: site.feLatitude,
+        feLongitude: site.feLongitude,
         status: site.status || 'ACTIVE'
       })),
       skipDuplicates: true
     });
-    
-    res.json({ 
+
+    res.json({
       message: `${createdSites.count} sites created successfully`,
       created: createdSites.count
     });
@@ -128,13 +128,13 @@ router.post('/bulk', async (req, res) => {
 // Update site
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  
+
   try {
-    const updatedSite = await prisma.sites.update({
+    const updatedSite = await prisma.site.update({
       where: { id },
-      data: { ...req.body, updated_at: new Date() }
+      data: { ...req.body, updatedAt: new Date() }
     });
-    
+
     res.json({ message: 'Site updated successfully', site: updatedSite });
   } catch (error) {
     console.error('Error updating site:', error);
@@ -145,12 +145,12 @@ router.put('/:id', async (req, res) => {
 // Delete site
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
-  
+
   try {
-    await prisma.sites.delete({
+    await prisma.site.delete({
       where: { id }
     });
-    
+
     res.json({ message: 'Site deleted successfully' });
   } catch (error) {
     console.error('Error deleting site:', error);

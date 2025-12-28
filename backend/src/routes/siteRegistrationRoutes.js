@@ -71,46 +71,61 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Coordinates must be within Indonesia bounds' });
     }
 
-    // Create site registration
-    const site = await prisma.site_registrations.create({
-      data: {
-        customer_site_id: customerSiteId,
-        customer_site_name: customerSiteName,
+    // Create site registration using 'sites' table
+    // Store additional tower info in task_data for tasks
+    const siteData = {
+      siteId: customerSiteId,
+      siteName: customerSiteName,
+      scope: coverageArea || 'MW', // coverage_area -> scope
+      region: region,
+      city: region || 'Unknown', // Using region as city for now
+      neLatitude: neLatitude ? parseFloat(neLatitude) : null,
+      neLongitude: neLongitude ? parseFloat(neLongitude) : null,
+      feLatitude: feLatitude ? parseFloat(feLatitude) : null,
+      feLongitude: feLongitude ? parseFloat(feLongitude) : null,
+      status: 'ACTIVE', // Changed from 'active' to 'ACTIVE'
+      atpRequired: true,
+      atpType: atpRequirements?.software && atpRequirements?.hardware ? 'BOTH' :
+               atpRequirements?.software ? 'SOFTWARE' :
+               atpRequirements?.hardware ? 'HARDWARE' : 'BOTH',
+      workflowStage: 'REGISTERED'
+    };
+
+    const site = await prisma.site.create({
+      data: siteData
+    });
+
+    // Auto-assign document controller based on region
+    // Using existing user IDs from database
+    const docControllerMap = {
+      'East Java': 'cmezu3img0000jiaj1w1jfcj1',      // admin@telecore.com
+      'Central Java': 'cmezu3img0000jiaj1w1jfcj1',    // admin@telecore.com
+      'West Java': 'cmezu3img0000jiaj1w1jfcj1',      // admin@telecore.com
+      'Jabodetabek': 'cmezu3img0000jiaj1w1jfcj1'     // admin@telecore.com
+    };
+
+    const assignedController = docControllerMap[region] || 'cmezu3img0000jiaj1w1jfcj1';  // Default to admin
+
+    // Prepare task data with additional tower info
+    const taskData = {
+      tower_info: {
         ne_tower_id: neTowerId,
         ne_tower_name: neTowerName,
         fe_tower_id: feTowerId,
         fe_tower_name: feTowerName,
-        ne_latitude: parseFloat(neLatitude),
-        ne_longitude: parseFloat(neLongitude),
-        fe_latitude: parseFloat(feLatitude),
-        fe_longitude: parseFloat(feLongitude),
-        region: region,
-        coverage_area: coverageArea,
         activity_flow: activityFlow,
         sow_category: sowCategory,
         project_code: projectCode,
         frequency_band: frequencyBand,
         link_capacity: linkCapacity,
         antenna_size: antennaSize,
-        equipment_type: equipmentType,
-        status: 'active',
-        registration_date: new Date()
+        equipment_type: equipmentType
       }
-    });
-
-    // Auto-assign document controller based on region
-    const docControllerMap = {
-      'East Java': 'DocCtrl_EastJava',
-      'Central Java': 'DocCtrl_CentralJava',
-      'West Java': 'DocCtrl_WestJava',
-      'Jabodetabek': 'DocCtrl_Jakarta'
     };
-    
-    const assignedController = docControllerMap[region] || 'DocCtrl_Default';
 
     // Create ATP tasks if required
     const atpTasks = [];
-    
+
     if (atpRequirements?.software) {
       const swTask = await prisma.task.create({
         data: {
@@ -121,8 +136,9 @@ router.post('/register', async (req, res) => {
           status: 'pending',
           priority: 'high',
           assignedTo: assignedController,
-          relatedSiteId: site.id,
-          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+          siteId: site.id,
+          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          taskData: taskData
         }
       });
       atpTasks.push(swTask);
@@ -138,8 +154,9 @@ router.post('/register', async (req, res) => {
           status: 'pending',
           priority: 'high',
           assignedTo: assignedController,
-          relatedSiteId: site.id,
-          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+          siteId: site.id,
+          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          taskData: taskData
         }
       });
       atpTasks.push(hwTask);
@@ -231,8 +248,8 @@ router.post('/validate', async (req, res) => {
     const errors = {};
 
     // Check for duplicate site ID
-    const existingSite = await prisma.site_registrations.findFirst({
-      where: { customer_site_id: customerSiteId }
+    const existingSite = await prisma.site.findFirst({
+      where: { siteId: customerSiteId }
     });
 
     if (existingSite) {

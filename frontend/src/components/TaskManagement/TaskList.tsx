@@ -1,19 +1,21 @@
+// Cache-bust: deployed at 2025-12-28 12:05 UTC - Fixed duplicate API paths
 import React, { useState, useEffect } from 'react';
 import { Clock, CheckCircle, AlertCircle, ArrowRight, Upload, FileText, Search, Eye, Send } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Task {
   id: string;
-  task_code: string;
-  task_type: string;
+  taskCode: string;
+  taskType: string;
   title: string;
   description?: string;
   status: string;
   priority: string;
-  site_id?: string;
-  created_at: string;
+  siteId?: string;
+  createdAt: string;
   sites?: {
-    site_id: string;
-    site_name: string;
+    siteId: string;
+    siteName: string;
     region: string;
   };
 }
@@ -23,6 +25,7 @@ interface TaskListProps {
 }
 
 const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,17 +41,20 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
 
   useEffect(() => {
     fetchTasks();
-  }, [viewType]);
+  }, [viewType, user]);
 
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const endpoint = viewType === 'pending' 
-        ? 'http://localhost:3011/api/v1/tasks?status=pending'
-        : 'http://localhost:3011/api/v1/tasks';
-      
+      let endpoint = '/api/v1/tasks';
+
+      // For pending tasks, filter by status only (show all pending tasks to all users)
+      if (viewType === 'pending') {
+        endpoint = '/api/v1/tasks?status=pending';
+      }
+
       const response = await fetch(endpoint);
-      
+
       if (response.ok) {
         const data = await response.json();
         setTasks(data.success ? data.data : data);
@@ -84,10 +90,10 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
 
   const performTask = async (taskId: string) => {
     try {
-      const response = await fetch(`http://localhost:3011/api/v1/tasks/${taskId}/complete`, {
+      const response = await fetch(`/api/v1/tasks/${taskId}/complete`, {
         method: 'POST'
       });
-      
+
       if (response.ok) {
         alert('Task completed successfully!');
         fetchTasks(); // Refresh task list
@@ -107,7 +113,7 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
 
   const checkExistingDocument = async (task: Task) => {
     try {
-      const response = await fetch(`http://localhost:3011/api/v1/atp/document/${task.task_code}`);
+      const response = await fetch(`/api/v1/atp/document/${task.taskCode}`);
       if (response.ok) {
         const data = await response.json();
         setUploadedDocument(data.document_path || null);
@@ -124,10 +130,10 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
     if (!file || !selectedTask) return;
 
     // Extract site_id properly
-    let siteId = selectedTask.sites?.site_id;
-    if (!siteId && selectedTask.task_code) {
+    let siteId = selectedTask.sites?.siteId;
+    if (!siteId && selectedTask.taskCode) {
       // Extract from task_code format: TSK-SITEID-NUM
-      const parts = selectedTask.task_code.split('-');
+      const parts = selectedTask.taskCode.split('-');
       if (parts.length >= 2) {
         siteId = parts[1];
       }
@@ -135,18 +141,18 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
     if (!siteId) siteId = 'UNKNOWN';
 
     console.log('Upload data:', {
-      task_code: selectedTask.task_code,
+      task_code: selectedTask.taskCode,
       site_id: siteId,
       filename: file.name
     });
 
     const formData = new FormData();
     formData.append('document', file);
-    formData.append('task_code', selectedTask.task_code);
+    formData.append('task_code', selectedTask.taskCode);
     formData.append('site_id', siteId);
 
     try {
-      const response = await fetch('http://localhost:3011/api/v1/atp/upload', {
+      const response = await fetch('/api/v1/atp/upload', {
         method: 'POST',
         body: formData
       });
@@ -156,7 +162,7 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
         setUploadedDocument(data.document_path);
         
         // Update task status to in_progress after upload
-        await fetch(`http://localhost:3011/api/v1/tasks/${selectedTask.id}`, {
+        await fetch(`/api/v1/tasks/${selectedTask.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'in_progress' })
@@ -179,7 +185,7 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
     if (!selectedTask) return;
 
     try {
-      const response = await fetch(`http://localhost:3011/api/v1/tasks/${selectedTask.id}`, {
+      const response = await fetch(`/api/v1/tasks/${selectedTask.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'submitted' })
@@ -206,7 +212,7 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
 
   const filteredTasks = tasks.filter(task => 
     task.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    task.task_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    task.taskCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     task.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -224,7 +230,7 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
     });
 
     try {
-      const response = await fetch('http://localhost:3011/api/v1/atp/bulk-upload', {
+      const response = await fetch('/api/v1/atp/bulk-upload', {
         method: 'POST',
         body: formData
       });
@@ -267,7 +273,7 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
 
     try {
       const promises = Array.from(selectedTasks).map(taskId =>
-        fetch(`http://localhost:3011/api/v1/tasks/${taskId}`, {
+        fetch(`/api/v1/tasks/${taskId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'submitted' })
@@ -286,7 +292,7 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
 
   const viewDocument = async (task: Task) => {
     try {
-      const response = await fetch(`http://localhost:3011/api/v1/atp/document/${task.task_code}`);
+      const response = await fetch(`/api/v1/atp/document/${task.taskCode}`);
       if (response.ok) {
         const data = await response.json();
         setViewDocumentPath(data.document_path);
@@ -400,24 +406,24 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
                     )}
                   </td>
                   <td className="px-3 py-3 text-sm font-mono text-gray-900">
-                    {task.task_code}
+                    {task.taskCode}
                   </td>
                   <td className="px-3 py-3 text-sm">
                     <div className="font-medium text-gray-900">ATP Document Upload</div>
                     <div className="text-xs text-gray-500 mt-1">
-                      <span className="font-medium">{task.sites?.site_id || task.task_code?.split('-')[1]}</span>
+                      <span className="font-medium">{task.sites?.siteId || task.taskCode?.split('-')[1]}</span>
                       {' - '}
-                      <span>{task.sites?.site_name || task.title?.replace('ATP Document Upload - ', '') || '-'}</span>
+                      <span>{task.sites?.siteName || task.title?.replace('ATP Document Upload - ', '') || '-'}</span>
                     </div>
                   </td>
                   <td className="px-3 py-3">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      task.task_type === 'ATP_SOFTWARE' ? 'bg-blue-100 text-blue-800' :
-                      task.task_type === 'ATP_HARDWARE' ? 'bg-green-100 text-green-800' :
+                      task.taskType === 'ATP_SOFTWARE' ? 'bg-blue-100 text-blue-800' :
+                      task.taskType === 'ATP_HARDWARE' ? 'bg-green-100 text-green-800' :
                       'bg-purple-100 text-purple-800'
                     }`}>
-                      {task.task_type === 'ATP_SOFTWARE' ? 'SW' : 
-                       task.task_type === 'ATP_HARDWARE' ? 'HW' : 'ATP'}
+                      {task.taskType === 'ATP_SOFTWARE' ? 'SW' : 
+                       task.taskType === 'ATP_HARDWARE' ? 'HW' : 'ATP'}
                     </span>
                   </td>
                   <td className="px-3 py-3">
@@ -444,7 +450,7 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
                     </span>
                   </td>
                   <td className="px-3 py-3 text-xs text-gray-500">
-                    {new Date(task.created_at).toLocaleDateString('en-GB', {
+                    {new Date(task.createdAt).toLocaleDateString('en-GB', {
                       day: '2-digit',
                       month: '2-digit',
                       year: '2-digit'
@@ -541,13 +547,13 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
             
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
-                <strong>Task:</strong> {selectedTask.task_code}
+                <strong>Task:</strong> {selectedTask.taskCode}
               </p>
               <p className="text-sm text-gray-600 mb-2">
-                <strong>Site:</strong> {selectedTask.sites?.site_id} - {selectedTask.sites?.site_name}
+                <strong>Site:</strong> {selectedTask.sites?.siteId} - {selectedTask.sites?.siteName}
               </p>
               <p className="text-sm text-gray-600 mb-4">
-                <strong>Type:</strong> {selectedTask.task_type === 'ATP_SOFTWARE' ? 'Software' : 'Hardware'}
+                <strong>Type:</strong> {selectedTask.taskType === 'ATP_SOFTWARE' ? 'Software' : 'Hardware'}
               </p>
             </div>
 
@@ -586,7 +592,7 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
               {uploadedDocument && (
                 <>
                   <button
-                    onClick={() => window.open(`http://localhost:3011/${uploadedDocument}`, '_blank')}
+                    onClick={() => window.open(`/api/v1/${uploadedDocument}`, '_blank')}
                     className="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
                   >
                     <FileText className="w-4 h-4" />
@@ -622,7 +628,7 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
             
             <div className="h-96 border border-gray-300 rounded overflow-hidden">
               <iframe
-                src={`http://localhost:3011/${viewDocumentPath}`}
+                src={`/api/v1/${viewDocumentPath}`}
                 className="w-full h-full"
                 title="Document Preview"
               />
@@ -636,7 +642,7 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
                 Close
               </button>
               <button
-                onClick={() => window.open(`http://localhost:3011/${viewDocumentPath}`, '_blank')}
+                onClick={() => window.open(`/api/v1/${viewDocumentPath}`, '_blank')}
                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
               >
                 Open in New Tab

@@ -19,6 +19,12 @@ app.use(cors());
 app.use(morgan('combined'));
 app.use(express.json());
 
+// Idempotency middleware (must be after express.json)
+const { idempotencyCheck } = require('./src/middleware/idempotency');
+app.use('/api/v1/site-registration', idempotencyCheck);
+app.use('/api/v1/atp/upload', idempotencyCheck);
+app.use('/api/v1/atp/bulk-upload', idempotencyCheck);
+
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));
 
@@ -329,10 +335,13 @@ process.on('SIGINT', async () => {
   process.exit();
 });
 
+// Export app for testing
+module.exports = app;
 
-
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`AMPS API server running on localhost:${PORT}`);
-  console.log('Database: Connected via Prisma');
-});
+// Start server only if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`AMPS API server running on localhost:${PORT}`);
+    console.log('Database: Connected via Prisma');
+  });
+}

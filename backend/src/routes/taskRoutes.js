@@ -15,27 +15,27 @@ try {
 router.get('/', async (req, res) => {
   try {
     const { site_id, assigned_to, status, task_type, workflow_type } = req.query;
-    
-    const whereClause = {};
-    if (site_id) whereClause.site_id = site_id;
-    if (assigned_to) whereClause.assigned_to = assigned_to;
-    if (status) whereClause.status = status;
-    if (task_type) whereClause.task_type = task_type;
-    if (workflow_type) whereClause.workflow_type = workflow_type;
 
-    const tasks = await prisma.tasks.findMany({
+    const whereClause = {};
+    if (site_id) whereClause.siteId = site_id;
+    if (assigned_to) whereClause.assignedTo = assigned_to;
+    if (status) whereClause.status = status;
+    if (task_type) whereClause.taskType = task_type;
+    if (workflow_type) whereClause.workflowType = workflow_type;
+
+    const tasks = await prisma.task.findMany({
       where: whereClause,
       include: {
         sites: {
           select: {
-            site_id: true,
-            site_name: true,
+            siteId: true,
+            siteName: true,
             region: true,
             city: true
           }
         }
       },
-      orderBy: { created_at: 'desc' }
+      orderBy: { createdAt: 'desc' }
     });
 
     console.log(`Found ${tasks.length} tasks`);
@@ -46,10 +46,10 @@ router.get('/', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching tasks:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch tasks', 
-      details: error.message 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch tasks',
+      details: error.message
     });
   }
 });
@@ -58,20 +58,20 @@ router.get('/', async (req, res) => {
 router.get('/site/:siteId', async (req, res) => {
   try {
     const { siteId } = req.params;
-    
-    const tasks = await prisma.tasks.findMany({
-      where: { site_id: siteId },
+
+    const tasks = await prisma.task.findMany({
+      where: { siteId: siteId },
       include: {
         sites: {
           select: {
-            site_id: true,
-            site_name: true,
+            siteId: true,
+            siteName: true,
             region: true,
             city: true
           }
         }
       },
-      orderBy: { created_at: 'desc' }
+      orderBy: { createdAt: 'desc' }
     });
 
     res.json({
@@ -82,10 +82,10 @@ router.get('/site/:siteId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching site tasks:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch site tasks', 
-      details: error.message 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch site tasks',
+      details: error.message
     });
   }
 });
@@ -117,7 +117,7 @@ router.post('/', async (req, res) => {
     }
 
     // Verify site exists
-    const site = await prisma.sites.findUnique({
+    const site = await prisma.site.findUnique({
       where: { id: site_id }
     });
 
@@ -128,26 +128,26 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const newTask = await prisma.tasks.create({
+    const newTask = await prisma.task.create({
       data: {
-        site_id,
-        task_type,
+        siteId: site_id,
+        taskType: task_type,
         title,
         description,
-        assigned_to,
-        workflow_type,
-        stage_number: stage_number || 1,
+        assignedTo: assigned_to,
+        workflowType: workflow_type,
+        stageNumber: stage_number || 1,
         priority: priority || 'normal',
-        sla_deadline: sla_deadline ? new Date(sla_deadline) : null,
-        parent_task_id,
-        depends_on,
-        task_data: task_data || {}
+        slaDeadline: sla_deadline ? new Date(sla_deadline) : null,
+        parentTaskId: parent_task_id,
+        dependsOn,
+        taskData: task_data || {}
       },
       include: {
         sites: {
           select: {
-            site_id: true,
-            site_name: true,
+            siteId: true,
+            siteName: true,
             region: true,
             city: true
           }
@@ -155,18 +155,18 @@ router.post('/', async (req, res) => {
       }
     });
 
-    console.log('Task created:', newTask.task_code);
+    console.log('Task created:', newTask.taskCode);
     res.status(201).json({
       success: true,
       data: newTask,
-      message: `Task ${newTask.task_code} created successfully`
+      message: `Task ${newTask.taskCode} created successfully`
     });
   } catch (error) {
     console.error('Error creating task:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to create task', 
-      details: error.message 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create task',
+      details: error.message
     });
   }
 });
@@ -176,26 +176,26 @@ router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
-    
+
     // Convert date strings to Date objects
     if (updateData.sla_deadline) {
-      updateData.sla_deadline = new Date(updateData.sla_deadline);
+      updateData.slaDeadline = new Date(updateData.sla_deadline);
     }
     if (updateData.started_at) {
-      updateData.started_at = new Date(updateData.started_at);
+      updateData.startedAt = new Date(updateData.started_at);
     }
     if (updateData.completed_at) {
-      updateData.completed_at = new Date(updateData.completed_at);
+      updateData.completedAt = new Date(updateData.completed_at);
     }
 
-    const updatedTask = await prisma.tasks.update({
+    const updatedTask = await prisma.task.update({
       where: { id },
       data: updateData,
       include: {
         sites: {
           select: {
-            site_id: true,
-            site_name: true,
+            siteId: true,
+            siteName: true,
             region: true,
             city: true
           }
@@ -206,14 +206,14 @@ router.put('/:id', async (req, res) => {
     res.json({
       success: true,
       data: updatedTask,
-      message: `Task ${updatedTask.task_code} updated successfully`
+      message: `Task ${updatedTask.taskCode} updated successfully`
     });
   } catch (error) {
     console.error('Error updating task:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to update task', 
-      details: error.message 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update task',
+      details: error.message
     });
   }
 });
@@ -223,20 +223,20 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deletedTask = await prisma.tasks.delete({
+    const deletedTask = await prisma.task.delete({
       where: { id }
     });
 
     res.json({
       success: true,
-      message: `Task ${deletedTask.task_code} deleted successfully`
+      message: `Task ${deletedTask.taskCode} deleted successfully`
     });
   } catch (error) {
     console.error('Error deleting task:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to delete task', 
-      details: error.message 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete task',
+      details: error.message
     });
   }
 });
@@ -245,10 +245,10 @@ router.delete('/:id', async (req, res) => {
 router.get('/stats', async (req, res) => {
   try {
     const { assigned_to, site_id } = req.query;
-    
+
     const whereClause = {};
-    if (assigned_to) whereClause.assigned_to = assigned_to;
-    if (site_id) whereClause.site_id = site_id;
+    if (assigned_to) whereClause.assignedTo = assigned_to;
+    if (site_id) whereClause.siteId = site_id;
 
     const [
       totalTasks,
@@ -257,16 +257,16 @@ router.get('/stats', async (req, res) => {
       completedTasks,
       overdueTasks
     ] = await Promise.all([
-      prisma.tasks.count({ where: whereClause }),
-      prisma.tasks.count({ where: { ...whereClause, status: 'pending' } }),
-      prisma.tasks.count({ where: { ...whereClause, status: 'in_progress' } }),
-      prisma.tasks.count({ where: { ...whereClause, status: 'completed' } }),
-      prisma.tasks.count({ 
-        where: { 
-          ...whereClause, 
-          sla_deadline: { lt: new Date() },
+      prisma.task.count({ where: whereClause }),
+      prisma.task.count({ where: { ...whereClause, status: 'pending' } }),
+      prisma.task.count({ where: { ...whereClause, status: 'in_progress' } }),
+      prisma.task.count({ where: { ...whereClause, status: 'completed' } }),
+      prisma.task.count({
+        where: {
+          ...whereClause,
+          slaDeadline: { lt: new Date() },
           status: { not: 'completed' }
-        } 
+        }
       })
     ]);
 
@@ -282,10 +282,10 @@ router.get('/stats', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching task stats:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch task statistics', 
-      details: error.message 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch task statistics',
+      details: error.message
     });
   }
 });
