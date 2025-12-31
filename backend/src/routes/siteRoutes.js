@@ -17,7 +17,7 @@ router.post('/register', async (req, res) => {
       contactPerson, contactPhone, contactEmail, status
     } = req.body;
 
-    const site = await prisma.sites.create({
+    const site = await prisma.site.create({
       data: {
         siteId, siteName, siteType, region, province, city, district,
         address, latitude: parseFloat(latitude), longitude: parseFloat(longitude),
@@ -38,7 +38,7 @@ router.post('/register', async (req, res) => {
 // Check Site ID availability
 router.get('/check-siteid/:siteId', async (req, res) => {
   try {
-    const existing = await prisma.sites.findUnique({
+    const existing = await prisma.site.findUnique({
       where: { siteId: req.params.siteId }
     });
     res.json({ available: !existing });
@@ -53,7 +53,7 @@ router.get('/suggest-siteid', async (req, res) => {
     const { region, city } = req.query;
     const prefix = `${region?.substring(0,2) || 'XX'}${city?.substring(0,3) || 'XXX'}`.toUpperCase();
     
-    const existing = await prisma.sites.findMany({
+    const existing = await prisma.site.findMany({
       where: { siteId: { startsWith: prefix } },
       select: { siteId: true },
       orderBy: { siteId: 'desc' },
@@ -140,14 +140,14 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
         }
 
         // Check duplicate Site ID
-        const existing = await prisma.sites.findUnique({
+        const existing = await prisma.site.findUnique({
           where: { siteId: row['Site ID'] }
         });
         if (existing) {
           throw new Error(`Site ID ${row['Site ID']} already exists`);
         }
 
-        const site = await prisma.sites.create({
+        const site = await prisma.site.create({
           data: {
             siteId: row['Site ID'],
             siteName: row['Site Name'],
@@ -199,7 +199,7 @@ router.post('/api/register', async (req, res) => {
 
     for (const siteData of sites) {
       try {
-        const site = await prisma.sites.create({
+        const site = await prisma.site.create({
           data: {
             siteId: siteData.siteId,
             siteName: siteData.siteName,
@@ -242,15 +242,15 @@ router.get('/', async (req, res) => {
     
     const where = {};
     if (atp_required === 'true') {
-      where.atp_required = true;
+      where.atpRequired = true;
     }
     if (workflow_stage) {
-      where.workflow_stage = workflow_stage;
+      where.workflowStage = workflow_stage;
     }
     
-    const sites = await prisma.sites.findMany({
+    const sites = await prisma.site.findMany({
       where,
-      orderBy: { created_at: 'desc' }
+      orderBy: { createdAt: 'desc' }
     });
     
     res.json({ success: true, data: sites });
