@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Project, ProjectFormData, Organization, APIResponse } from './types';
 
 interface ProjectFormProps {
@@ -29,7 +29,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ projectId, onSuccess, onCance
   const [isEdit, setIsEdit] = useState(false);
 
   // Fetch organizations for dropdown
-  const fetchOrganizations = async () => {
+  const fetchOrganizations = useCallback(async () => {
     try {
       const response = await fetch('/api/v1/organizations/list');
       const data: APIResponse<Organization[]> = await response.json();
@@ -40,10 +40,10 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ projectId, onSuccess, onCance
     } catch (err) {
       console.error('Error fetching organizations:', err);
     }
-  };
+  }, []);
 
   // Fetch project data if editing
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     if (!projectId) return;
 
     try {
@@ -77,7 +77,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ projectId, onSuccess, onCance
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -132,7 +132,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ projectId, onSuccess, onCance
     if (projectId) {
       fetchProject();
     }
-  }, [projectId]);
+  }, [fetchOrganizations, fetchProject, projectId]);
 
   if (loading) {
     return (

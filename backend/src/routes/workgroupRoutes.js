@@ -1,6 +1,12 @@
 const router = require('express').Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { validateBody } = require('../middleware/validator');
+const {
+  workgroupCreateSchema,
+  workgroupUpdateSchema,
+  workgroupMemberSchema
+} = require('../validations/workgroup');
 
 // Middleware
 const authenticateToken = (req, res, next) => {
@@ -79,7 +85,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Create workgroup
-router.post('/create', authenticateToken, async (req, res) => {
+router.post('/create', authenticateToken, validateBody(workgroupCreateSchema, { stripUnknown: false }), async (req, res) => {
   try {
     const workgroup = await prisma.workgroup.create({
       data: {
@@ -102,7 +108,7 @@ router.post('/create', authenticateToken, async (req, res) => {
 });
 
 // Update workgroup
-router.put('/update/:id', authenticateToken, async (req, res) => {
+router.put('/update/:id', authenticateToken, validateBody(workgroupUpdateSchema, { stripUnknown: false }), async (req, res) => {
   try {
     const workgroup = await prisma.workgroup.update({
       where: { id: req.params.id },
@@ -157,7 +163,7 @@ router.delete('/delete/:id', authenticateToken, async (req, res) => {
 });
 
 // Add member to workgroup
-router.post('/:id/members', authenticateToken, async (req, res) => {
+router.post('/:id/members', authenticateToken, validateBody(workgroupMemberSchema), async (req, res) => {
   try {
     // Check if user is already a member
     const existing = await prisma.workgroupMember.findFirst({

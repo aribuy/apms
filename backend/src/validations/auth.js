@@ -1,0 +1,15 @@
+const Joi = require('joi');
+
+const loginSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().min(1).required()
+});
+
+const refreshSchema = Joi.object({
+  refreshToken: Joi.string().min(10).required()
+});
+
+module.exports = {
+  loginSchema,
+  refreshSchema
+};

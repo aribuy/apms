@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface ATPDocument {
   id: string;
@@ -22,18 +22,13 @@ const ATPTest: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchATPData();
-  }, []);
-
-  const fetchATPData = async () => {
+  const fetchATPData = useCallback(async () => {
     try {
       setLoading(true);
       
       // Test basic API connection
       const healthResponse = await fetch('http://localhost:3011/api/health');
-      const healthData = await healthResponse.json();
-      console.log('API Health:', healthData);
+      await healthResponse.json();
 
       // Try to fetch ATP documents directly from database
       const testResponse = await fetch('http://localhost:3011/api/v1/atp', {
@@ -45,10 +40,8 @@ const ATPTest: React.FC = () => {
 
       if (testResponse.ok) {
         const data = await testResponse.json();
-        console.log('ATP Data:', data);
         setAtpDocuments(data.data || []);
       } else {
-        console.log('ATP endpoint not available, using mock data');
         // Mock data for testing
         setAtpDocuments([
           {
@@ -76,7 +69,11 @@ const ATPTest: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchATPData();
+  }, [fetchATPData]);
 
   if (loading) {
     return (

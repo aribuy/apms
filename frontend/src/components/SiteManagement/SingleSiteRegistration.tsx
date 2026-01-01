@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface FormData {
   siteId: string;
@@ -72,7 +72,7 @@ const SingleSiteRegistration: React.FC<Props> = ({ onSuccess }) => {
     }
   };
 
-  const getSiteIdSuggestions = async () => {
+  const getSiteIdSuggestions = useCallback(async () => {
     if (!formData.region || !formData.city) return;
     
     try {
@@ -82,7 +82,7 @@ const SingleSiteRegistration: React.FC<Props> = ({ onSuccess }) => {
     } catch (error) {
       console.error('Error getting suggestions:', error);
     }
-  };
+  }, [formData.city, formData.region]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -93,7 +93,7 @@ const SingleSiteRegistration: React.FC<Props> = ({ onSuccess }) => {
 
   useEffect(() => {
     getSiteIdSuggestions();
-  }, [formData.region, formData.city]);
+  }, [getSiteIdSuggestions]);
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));

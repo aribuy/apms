@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const XLSX = require('xlsx');
 const { PrismaClient } = require('@prisma/client');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -51,9 +52,9 @@ async function createATPTasks(siteId, atpType) {
       tasksCreated++;
     }
     
-    console.log(`${tasksCreated} ATP tasks (${atpType}) created for site: ${siteId}`);
+    logger.debug(`${tasksCreated} ATP tasks (${atpType}) created for site: ${siteId}`);
   } catch (error) {
-    console.error('Error creating ATP tasks:', error);
+    logger.error('Error creating ATP tasks:', error);
   }
 }
 
@@ -99,9 +100,9 @@ async function createATPTasksWithTx(siteId, atpType, tx) {
       tasksCreated++;
     }
     
-    console.log(`${tasksCreated} ATP tasks (${atpType}) created for site: ${siteId}`);
+    logger.debug(`${tasksCreated} ATP tasks (${atpType}) created for site: ${siteId}`);
   } catch (error) {
-    console.error('Error creating ATP tasks:', error);
+    logger.error('Error creating ATP tasks:', error);
     throw error;
   }
 }
@@ -109,7 +110,7 @@ async function createATPTasksWithTx(siteId, atpType, tx) {
 // Single Site Registration
 router.post('/register', async (req, res) => {
   try {
-    console.log('Site registration request:', req.body);
+    logger.debug('Site registration request:', req.body);
     
     const {
       site_id, site_name, site_type, region, city,
@@ -127,7 +128,7 @@ router.post('/register', async (req, res) => {
     // Test database connection first
     try {
       await prisma.$connect();
-      console.log('Database connected successfully');
+      logger.debug('Database connected successfully');
       
       const site = await prisma.sites.create({
         data: {
@@ -144,7 +145,7 @@ router.post('/register', async (req, res) => {
         }
       });
 
-      console.log('Site created successfully:', site);
+      logger.debug('Site created successfully:', site);
 
       // Auto-create ATP tasks based on ATP type requirement
       const atpType = req.body.atpType || 'both';
@@ -152,7 +153,7 @@ router.post('/register', async (req, res) => {
 
       res.json({ success: true, site });
     } catch (dbError) {
-      console.error('Database operation failed:', dbError);
+      logger.error('Database operation failed:', dbError);
       
       // Return mock success response when database is unavailable
       const mockSite = {
@@ -170,11 +171,11 @@ router.post('/register', async (req, res) => {
         created_at: new Date().toISOString()
       };
       
-      console.log('Using mock site response:', mockSite);
+      logger.debug('Using mock site response:', mockSite);
       res.json({ success: true, site: mockSite, note: 'Database unavailable - using mock response' });
     }
   } catch (error) {
-    console.error('Site registration error details:', {
+    logger.error('Site registration error details:', {
       message: error.message,
       code: error.code,
       meta: error.meta
@@ -238,7 +239,7 @@ router.get('/template', (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="site_template.csv"');
     res.send(csvData);
   } catch (error) {
-    console.error('Template generation error:', error);
+    logger.error('Template generation error:', error);
     res.status(500).json({ error: 'Failed to generate template' });
   }
 });
@@ -246,7 +247,7 @@ router.get('/template', (req, res) => {
 
 // RECTIFIED: Bulk Upload Endpoint
 router.post('/bulk-upload', upload.single('file'), async (req, res) => {
-  console.log('Bulk upload request received');
+  logger.debug('Bulk upload request received');
   if (!req.file) {
     return res.status(400).json({ success: false, error: 'No file uploaded' });
   }
@@ -292,7 +293,7 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
       throw new Error('No valid data rows found in the file.');
     }
 
-    console.log(`Processing ${data.length} valid rows.`);
+    logger.debug(`Processing ${data.length} valid rows.`);
     
     const success = [];
     const errors = [];
@@ -331,7 +332,7 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
             }
           });
 
-          console.log(`Site created in transaction: ${site.site_id}`);
+          logger.debug(`Site created in transaction: ${site.site_id}`);
 
           const atpSoftware = String(row['atp_software_required']).toLowerCase() === 'true';
           const atpHardware = String(row['atp_hardware_required']).toLowerCase() === 'true';
@@ -348,7 +349,7 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
         success.push({ row: i + 2, siteId: siteId });
 
       } catch (error) {
-        console.error(`Error processing row ${i + 2}:`, error.message);
+        logger.error(`Error processing row ${i + 2}:`, error.message);
         errors.push({ row: i + 2, error: error.message });
       }
     }
@@ -361,13 +362,13 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
     res.json({ success: true, results: { success, errors, message } });
 
   } catch (error) {
-    console.error('Fatal bulk upload error:', error);
+    logger.error('Fatal bulk upload error:', error);
     res.status(500).json({ success: false, error: `A fatal error occurred: ${error.message}` });
   } finally {
     if (req.file) {
       const fs = require('fs');
       fs.unlink(req.file.path, (err) => {
-        if (err) console.error("Error deleting temp file:", err);
+        if (err) logger.error("Error deleting temp file:", err);
       });
     }
   }
@@ -376,7 +377,7 @@ module.exports = router;
 
 // RECTIFIED: Bulk Upload Endpoint
 router.post('/bulk-upload', upload.single('file'), async (req, res) => {
-  console.log('Bulk upload request received');
+  logger.debug('Bulk upload request received');
   if (!req.file) {
     return res.status(400).json({ success: false, error: 'No file uploaded' });
   }
@@ -422,7 +423,7 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
       throw new Error('No valid data rows found in the file.');
     }
 
-    console.log(`Processing ${data.length} valid rows.`);
+    logger.debug(`Processing ${data.length} valid rows.`);
     
     const success = [];
     const errors = [];
@@ -461,7 +462,7 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
             }
           });
 
-          console.log(`Site created in transaction: ${site.site_id}`);
+          logger.debug(`Site created in transaction: ${site.site_id}`);
 
           const atpSoftware = String(row['atp_software_required']).toLowerCase() === 'true';
           const atpHardware = String(row['atp_hardware_required']).toLowerCase() === 'true';
@@ -478,7 +479,7 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
         success.push({ row: i + 2, siteId: siteId });
 
       } catch (error) {
-        console.error(`Error processing row ${i + 2}:`, error.message);
+        logger.error(`Error processing row ${i + 2}:`, error.message);
         errors.push({ row: i + 2, error: error.message });
       }
     }
@@ -491,13 +492,13 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
     res.json({ success: true, results: { success, errors, message } });
 
   } catch (error) {
-    console.error('Fatal bulk upload error:', error);
+    logger.error('Fatal bulk upload error:', error);
     res.status(500).json({ success: false, error: `A fatal error occurred: ${error.message}` });
   } finally {
     if (req.file) {
       const fs = require('fs');
       fs.unlink(req.file.path, (err) => {
-        if (err) console.error("Error deleting temp file:", err);
+        if (err) logger.error("Error deleting temp file:", err);
       });
     }
   }

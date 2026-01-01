@@ -5,6 +5,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('../utils/logger');
 
 /**
  * Check if user has specific permission
@@ -19,14 +20,14 @@ const hasPermission = async (userId, permissionCode) => {
       SELECT EXISTS(
         SELECT 1
         FROM v_effective_permissions
-        WHERE user_id = $1
-        AND permission_code = $2
+        WHERE user_id = ${userId}
+        AND permission_code = ${permissionCode}
       ) as has_perm
-    `, [userId, permissionCode];
+    `;
 
     return result[0]?.has_perm || false;
   } catch (error) {
-    console.error('Permission check error:', error);
+    logger.error({ err: error }, 'Permission check error');
     return false;
   }
 };
@@ -43,14 +44,14 @@ const hasAnyPermission = async (userId, permissionCodes) => {
       SELECT EXISTS(
         SELECT 1
         FROM v_effective_permissions
-        WHERE user_id = $1
-        AND permission_code = ANY($2)
+        WHERE user_id = ${userId}
+        AND permission_code = ANY(${permissionCodes})
       ) as has_perm
-    `, [userId, permissionCodes];
+    `;
 
     return result[0]?.has_perm || false;
   } catch (error) {
-    console.error('Permission check error:', error);
+    logger.error({ err: error }, 'Permission check error');
     return false;
   }
 };
@@ -66,13 +67,13 @@ const hasAllPermissions = async (userId, permissionCodes) => {
     const result = await prisma.$queryRaw`
       SELECT COUNT(DISTINCT permission_code) as perm_count
       FROM v_effective_permissions
-      WHERE user_id = $1
-      AND permission_code = ANY($2)
-    `, [userId, permissionCodes];
+      WHERE user_id = ${userId}
+      AND permission_code = ANY(${permissionCodes})
+    `;
 
     return result[0]?.perm_count === permissionCodes.length;
   } catch (error) {
-    console.error('Permission check error:', error);
+    logger.error({ err: error }, 'Permission check error');
     return false;
   }
 };
@@ -93,13 +94,13 @@ const getUserPermissions = async (userId) => {
         resource,
         conditions
       FROM v_effective_permissions
-      WHERE user_id = $1
+      WHERE user_id = ${userId}
       ORDER BY module, resource, action
-    `, [userId];
+    `;
 
     return permissions;
   } catch (error) {
-    console.error('Get permissions error:', error);
+    logger.error({ err: error }, 'Get permissions error');
     return [];
   }
 };
@@ -151,7 +152,7 @@ const authorize = (permissionCodes, strategy = 'any') => {
       req.userPermissions = await getUserPermissions(userId);
       next();
     } catch (error) {
-      console.error('Authorization error:', error);
+      logger.error({ err: error }, 'Authorization error');
       res.status(500).json({
         success: false,
         error: 'Authorization check failed'
@@ -202,7 +203,7 @@ const authorizeResource = (resourceType, action) => {
 
       next();
     } catch (error) {
-      console.error('Resource authorization error:', error);
+      logger.error({ err: error }, 'Resource authorization error');
       res.status(500).json({
         success: false,
         error: 'Authorization check failed'
@@ -217,29 +218,32 @@ const authorizeResource = (resourceType, action) => {
 const checkResourceOwnership = async (userId, resourceType, resourceId) => {
   try {
     switch (resourceType) {
-      case 'atp_document':
+      case 'atp_document': {
         const doc = await prisma.$queryRaw`
-          SELECT submitted_by FROM atp_documents WHERE id = $1
-        `, [resourceId]);
+          SELECT submitted_by FROM atp_documents WHERE id = ${resourceId}
+        `;
         return doc[0]?.submitted_by === userId;
+      }
 
-      case 'site':
+      case 'site': {
         const site = await prisma.$queryRaw`
-          SELECT created_by FROM sites WHERE id = $1
-        `, [resourceId];
+          SELECT created_by FROM sites WHERE id = ${resourceId}
+        `;
         return site[0]?.created_by === userId;
+      }
 
-      case 'task':
+      case 'task': {
         const task = await prisma.$queryRaw`
-          SELECT assigned_by FROM tasks WHERE id = $1
-        `, [resourceId];
+          SELECT assigned_by FROM tasks WHERE id = ${resourceId}
+        `;
         return task[0]?.assigned_by === userId;
+      }
 
       default:
         return false;
     }
   } catch (error) {
-    console.error('Ownership check error:', error);
+    logger.error({ err: error }, 'Ownership check error');
     return false;
   }
 };
@@ -266,20 +270,16 @@ const logAudit = async (auditData) => {
 
     await prisma.$queryRaw`
       SELECT log_audit(
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+        ${userId}, ${userEmail}, ${userRole}, ${action}, ${resourceType},
+        ${resourceId}, ${oldData ? JSON.stringify(oldData) : null},
+        ${newData ? JSON.stringify(newData) : null}, ${ipAddress},
+        ${userAgent}, ${status}
       )
-    `, [
-      userId, userEmail, userRole, action, resourceType, resourceId,
-      oldData ? JSON.stringify(oldData) : null,
-      newData ? JSON.stringify(newData) : null,
-      ipAddress,
-      userAgent,
-      status
-    ]);
+    `;
 
-    console.log(`[AUDIT] ${action} on ${resourceType}:${resourceId} by ${userEmail}`);
+    logger.info({ action, resourceType, resourceId, userEmail }, 'Audit log entry created');
   } catch (error) {
-    console.error('Audit log error:', error);
+    logger.error({ err: error }, 'Audit log error');
   }
 };
 
@@ -319,7 +319,7 @@ const auditLog = (action, resourceType) => {
           status: res.statusCode < 400 ? 'SUCCESS' : 'FAILURE'
         });
       } catch (error) {
-        console.error('Audit logging error:', error);
+        logger.error({ err: error }, 'Audit logging error');
       }
     });
   };

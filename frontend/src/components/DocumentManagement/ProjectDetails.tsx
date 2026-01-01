@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  ArrowLeft, Edit2, Trash2, Calendar, MapPin, User, 
+  ArrowLeft, Edit2, Trash2, Calendar, 
   DollarSign, FileText, Upload, Download, Eye
 } from 'lucide-react';
 import DocumentUploadModal from './DocumentUploadModal';
@@ -34,7 +34,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   const [uploadModalOpen, setUploadModalOpen] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
 
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/v1/projects/${projectId}`);
@@ -52,7 +52,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
 
   const handleDocumentUpload = async (files: File[]) => {
     setUploading(true);
@@ -80,7 +80,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
       setUploading(false);
     }
   };
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     try {
       const response = await fetch(`/api/v1/projects/${projectId}/documents`);
       const data: APIResponse<Document[]> = await response.json();
@@ -91,12 +91,12 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     } catch (err) {
       console.error('Error fetching documents:', err);
     }
-  };
+  }, [projectId]);
 
   useEffect(() => {
     fetchProject();
     fetchDocuments();
-  }, [projectId]);
+  }, [fetchProject, fetchDocuments]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();

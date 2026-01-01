@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Upload, FileText, CheckCircle, AlertCircle, Eye, Download } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Upload, FileText, CheckCircle, AlertCircle, Eye } from 'lucide-react';
 
 interface Site {
   id: string;
@@ -29,12 +29,7 @@ const ATPSubmission: React.FC<ATPSubmissionProps> = ({ userRole = 'VENDOR' }) =>
   const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchSites();
-    fetchTemplates();
-  }, []);
-
-  const fetchSites = async () => {
+  const fetchSites = useCallback(async () => {
     try {
       const response = await fetch('/api/v1/sites');
       const data = await response.json();
@@ -42,9 +37,9 @@ const ATPSubmission: React.FC<ATPSubmissionProps> = ({ userRole = 'VENDOR' }) =>
     } catch (error) {
       console.error('Error fetching sites:', error);
     }
-  };
+  }, []);
 
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     try {
       const response = await fetch('/api/v1/atp-templates');
       const data = await response.json();
@@ -54,7 +49,12 @@ const ATPSubmission: React.FC<ATPSubmissionProps> = ({ userRole = 'VENDOR' }) =>
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchSites();
+    fetchTemplates();
+  }, [fetchSites, fetchTemplates]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

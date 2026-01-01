@@ -51,9 +51,6 @@ const ATPTaskModal: React.FC<ATPTaskModalProps> = ({ task, userRole, onClose, on
     }
 
     try {
-      let endpoint = '';
-      let payload = {};
-
       if (activeTab === 'upload') {
         // Submit ATP document
         const formData = new FormData();
@@ -61,20 +58,11 @@ const ATPTaskModal: React.FC<ATPTaskModalProps> = ({ task, userRole, onClose, on
         formData.append('siteId', task.site_id || '');
         formData.append('taskId', task.id);
         
-        console.log('Submitting ATP with data:', {
-          siteId: task.site_id,
-          taskId: task.id,
-          fileName: uploadedFile!.name
-        });
-        
         const response = await fetch('http://localhost:3011/api/v1/atp/submit', {
           method: 'POST',
           body: formData
         });
-        
-        console.log('Response status:', response.status);
         const result = await response.json();
-        console.log('Response data:', result);
         
         if (result.success) {
           alert(`ATP submitted successfully!\nATP Code: ${result.atpCode}\nFile: ${result.fileName || uploadedFile!.name}`);
@@ -100,7 +88,7 @@ const ATPTaskModal: React.FC<ATPTaskModalProps> = ({ task, userRole, onClose, on
         const atpId = task.task_data.atp_id;
         const stageId = task.task_data.stage_id;
 
-        payload = {
+        const payload = {
           stageId: stageId,
           decision: reviewDecision,
           comments,

@@ -1,6 +1,11 @@
 const router = require('express').Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { validateBody } = require('../middleware/validator');
+const {
+  organizationCreateSchema,
+  organizationUpdateSchema
+} = require('../validations/organization');
 
 // Middleware to check authentication
 const authenticateToken = (req, res, next) => {
@@ -64,7 +69,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Create organization
-router.post('/create', authenticateToken, async (req, res) => {
+router.post('/create', authenticateToken, validateBody(organizationCreateSchema), async (req, res) => {
   try {
     const { name, code, type, status, contactEmail, contactPhone, address } = req.body;
     
@@ -100,7 +105,7 @@ router.post('/create', authenticateToken, async (req, res) => {
 });
 
 // Update organization
-router.put('/update/:id', authenticateToken, async (req, res) => {
+router.put('/update/:id', authenticateToken, validateBody(organizationUpdateSchema), async (req, res) => {
   try {
     const { name, code, type, status, contactEmail, contactPhone, address } = req.body;
     

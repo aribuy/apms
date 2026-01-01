@@ -1,7 +1,8 @@
 // Cache-bust: deployed at 2025-12-28 12:05 UTC - Fixed duplicate API paths
-import React, { useState, useEffect } from 'react';
-import { Clock, CheckCircle, AlertCircle, ArrowRight, Upload, FileText, Search, Eye, Send } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Upload, FileText, Search, Eye, Send } from 'lucide-react';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { apiClient } from '../../utils/apiClient';
 
 interface Task {
   id: string;
@@ -25,7 +26,7 @@ interface TaskListProps {
 }
 
 const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
-  const { user } = useAuth();
+  const { currentWorkspace } = useWorkspace();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,70 +40,30 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewDocumentPath, setViewDocumentPath] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchTasks();
-  }, [viewType, user]);
-
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
-      let endpoint = '/api/v1/tasks';
-
-      // For pending tasks, filter by status only (show all pending tasks to all users)
+      const params: Record<string, string> = {};
       if (viewType === 'pending') {
-        endpoint = '/api/v1/tasks?status=pending';
+        params.status = 'pending';
+      }
+      if (currentWorkspace?.id) {
+        params.workspaceId = currentWorkspace.id;
       }
 
-      const response = await fetch(endpoint);
-
-      if (response.ok) {
-        const data = await response.json();
-        setTasks(data.success ? data.data : data);
-      }
+      const response = await apiClient.get('/api/v1/tasks', { params });
+      const data = response.data;
+      setTasks(data.success ? data.data : data);
     } catch (error) {
       console.error('Error fetching tasks:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentWorkspace?.id, viewType]);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'in_progress':
-        return <Clock className="w-5 h-5 text-yellow-500" />;
-      default:
-        return <AlertCircle className="w-5 h-5 text-red-500" />;
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-800';
-      case 'normal':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const performTask = async (taskId: string) => {
-    try {
-      const response = await fetch(`/api/v1/tasks/${taskId}/complete`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        alert('Task completed successfully!');
-        fetchTasks(); // Refresh task list
-      }
-    } catch (error) {
-      console.error('Error completing task:', error);
-      alert('Failed to complete task');
-    }
-  };
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
 
   const handlePerformTask = (task: Task) => {
     setSelectedTask(task);
@@ -139,12 +100,6 @@ const TaskList: React.FC<TaskListProps> = ({ viewType }) => {
       }
     }
     if (!siteId) siteId = 'UNKNOWN';
-
-    console.log('Upload data:', {
-      task_code: selectedTask.taskCode,
-      site_id: siteId,
-      filename: file.name
-    });
 
     const formData = new FormData();
     formData.append('document', file);

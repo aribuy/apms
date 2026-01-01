@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, FileText, CheckCircle, AlertTriangle, Clock, Eye, Zap } from 'lucide-react';
 import ATPReview from './ATPReview';
 import MWATPForm from './MWATPForm';
@@ -29,7 +29,7 @@ interface ATP {
 }
 
 const ATPManagement: React.FC = () => {
-  const { canUploadATP, canReviewATP, userRole } = usePermissions();
+  const { canUploadATP, canReviewATP } = usePermissions();
   const [activeTab, setActiveTab] = useState(canUploadATP() ? 'submission' : 'review');
   const [atps, setAtps] = useState<ATP[]>([]);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -40,11 +40,7 @@ const ATPManagement: React.FC = () => {
   const [showDigitalForm, setShowDigitalForm] = useState(false);
   const [currentAtpId, setCurrentAtpId] = useState<string>('');
 
-  useEffect(() => {
-    fetchATPs();
-  }, []);
-
-  const fetchATPs = async () => {
+  const fetchATPs = useCallback(async () => {
     try {
       const response = await fetch('http://localhost:3011/api/v1/atp');
       const data = await response.json();
@@ -52,7 +48,11 @@ const ATPManagement: React.FC = () => {
     } catch (error) {
       console.error('Error fetching ATPs:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchATPs();
+  }, [fetchATPs]);
 
   const handleFileUpload = async () => {
     if (!uploadFile || !siteId || !selectedScope) {

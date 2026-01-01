@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Shield, Save, RotateCcw } from 'lucide-react';
+import { Settings, Save, RotateCcw } from 'lucide-react';
 
 interface Role {
   id: string;

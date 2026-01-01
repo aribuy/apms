@@ -8,30 +8,46 @@ try {
 } catch (error) {
   console.error('Error initializing Prisma:', error);
 }
+const { validateBody } = require('../middleware/validator');
+const {
+  reviewDecisionSchema,
+  punchlistCompleteSchema,
+  assignReviewerSchema
+} = require('../validations/atpWorkflow');
 
 // ATP Workflow Configuration
 const WORKFLOW_CONFIG = {
-  SOFTWARE: {
-    stages: [
-      { code: 'BO_REVIEW', name: 'Business Operations Review', role: 'BO', sla_hours: 48 },
-      { code: 'SME_REVIEW', name: 'SME Technical Review', role: 'SME', sla_hours: 48 },
-      { code: 'HEAD_NOC_REVIEW', name: 'Head NOC Final Review', role: 'HEAD_NOC', sla_hours: 24 }
-    ]
-  },
-  HARDWARE: {
+  RAN_MW: {
     stages: [
       { code: 'FOP_RTS_REVIEW', name: 'FOP/RTS Field Review', role: 'FOP_RTS', sla_hours: 48 },
       { code: 'REGION_REVIEW', name: 'Region Team Review', role: 'REGION_TEAM', sla_hours: 48 },
       { code: 'RTH_REVIEW', name: 'RTH Final Approval', role: 'RTH', sla_hours: 24 }
     ]
   },
-  BOTH: {
+  PLN_UPGRADE: {
+    stages: [
+      { code: 'ROH_REVIEW', name: 'ROH Review', role: 'ROH', sla_hours: 48 },
+      { code: 'RTH_REVIEW', name: 'RTH Final Approval', role: 'RTH', sla_hours: 24 }
+    ]
+  },
+  DISMANTLE_DROP: {
+    stages: [
+      { code: 'FOP_RTS_REVIEW', name: 'FOP/RTS Field Review', role: 'FOP_RTS', sla_hours: 48 },
+      { code: 'REGION_REVIEW', name: 'Region Team Review', role: 'REGION_TEAM', sla_hours: 48 },
+      { code: 'PMO_REVIEW', name: 'PMO Final Approval', role: 'PMO', sla_hours: 48 }
+    ]
+  },
+  DISMANTLE_KEEP: {
+    stages: [
+      { code: 'ROH_REVIEW', name: 'ROH Review', role: 'ROH', sla_hours: 48 },
+      { code: 'RTH_REVIEW', name: 'RTH Final Approval', role: 'RTH', sla_hours: 24 }
+    ]
+  },
+  SOFTWARE_LICENSE: {
     stages: [
       { code: 'BO_REVIEW', name: 'Business Operations Review', role: 'BO', sla_hours: 48 },
-      { code: 'FOP_RTS_REVIEW', name: 'FOP/RTS Field Review', role: 'FOP_RTS', sla_hours: 48 },
       { code: 'SME_REVIEW', name: 'SME Technical Review', role: 'SME', sla_hours: 48 },
-      { code: 'REGION_REVIEW', name: 'Region Team Review', role: 'REGION_TEAM', sla_hours: 48 },
-      { code: 'FINAL_REVIEW', name: 'Final Approval', role: 'HEAD_NOC', sla_hours: 24 }
+      { code: 'HEAD_NOC_REVIEW', name: 'Head NOC Final Review', role: 'HEAD_NOC', sla_hours: 24 }
     ]
   }
 };
@@ -40,7 +56,7 @@ const WORKFLOW_CONFIG = {
 router.post('/initialize/:atpId', async (req, res) => {
   try {
     const { atpId } = req.params;
-    const { workflow_type = 'SOFTWARE' } = req.body;
+    const { workflow_type = 'SOFTWARE_LICENSE' } = req.body;
 
     const atp = await prisma.atp_documents.findUnique({
       where: { id: atpId }
@@ -50,7 +66,7 @@ router.post('/initialize/:atpId', async (req, res) => {
       return res.status(404).json({ success: false, error: 'ATP document not found' });
     }
 
-    const stages = WORKFLOW_CONFIG[workflow_type]?.stages || WORKFLOW_CONFIG.SOFTWARE.stages;
+    const stages = WORKFLOW_CONFIG[workflow_type]?.stages || WORKFLOW_CONFIG.SOFTWARE_LICENSE.stages;
     
     // Create review stages
     const reviewStages = [];
@@ -155,7 +171,7 @@ router.get('/reviews/pending', async (req, res) => {
 });
 
 // Submit review decision
-router.post('/reviews/:reviewStageId/decision', async (req, res) => {
+router.post('/reviews/:reviewStageId/decision', validateBody(reviewDecisionSchema), async (req, res) => {
   try {
     const { reviewStageId } = req.params;
     const { decision, comments, reviewer_id, checklist_results, punchlist_items } = req.body;
@@ -396,7 +412,7 @@ router.get('/punchlist', async (req, res) => {
 });
 
 // Complete punchlist rectification
-router.post('/punchlist/:punchlistId/complete', async (req, res) => {
+router.post('/punchlist/:punchlistId/complete', validateBody(punchlistCompleteSchema), async (req, res) => {
   try {
     const { punchlistId } = req.params;
     const { rectification_notes, evidence_after, completed_by } = req.body;
@@ -408,7 +424,15 @@ router.post('/punchlist/:punchlistId/complete', async (req, res) => {
         rectification_notes,
         evidence_after: evidence_after || {},
         completed_by,
-        completed_at: new Date()
+        completed_at: new Date(),
+        qa_validation_status: 'pending',
+        qa_validated_by: null,
+        qa_validated_at: null,
+        qa_validation_comments: null,
+        pic_approval_status: 'pending',
+        pic_approved_by: null,
+        pic_approved_at: null,
+        pic_approval_comments: null
       }
     });
 
@@ -530,7 +554,7 @@ router.get('/stats', async (req, res) => {
 });
 
 // Bulk assign reviewer
-router.post('/assign-reviewer', async (req, res) => {
+router.post('/assign-reviewer', validateBody(assignReviewerSchema), async (req, res) => {
   try {
     const { review_stage_ids, reviewer_id } = req.body;
 

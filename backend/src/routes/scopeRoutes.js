@@ -2,6 +2,8 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
 const prisma = new PrismaClient();
+const { validateBody } = require('../middleware/validator');
+const { scopeCreateSchema } = require('../validations/scope');
 
 // Get all ATP scopes
 router.get('/', async (req, res) => {
@@ -31,11 +33,11 @@ router.get('/', async (req, res) => {
 });
 
 // Create new scope
-router.post('/', async (req, res) => {
+router.post('/', validateBody(scopeCreateSchema), async (req, res) => {
   try {
     const { name, description } = req.body;
     
-    const result = await prisma.$executeRaw`
+    await prisma.$executeRaw`
       INSERT INTO atp_scopes (name, description) 
       VALUES (${name}, ${description})
     `;

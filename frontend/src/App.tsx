@@ -4,24 +4,27 @@ import UserManagement from './components/UserManagement/UserManagement';
 import OrganizationManagement from "./components/OrganizationManagement/OrganizationManagement";
 import WorkgroupManagement from "./components/WorkgroupManagement/WorkgroupManagement";
 import DocumentManagement from "./components/DocumentManagement/DocumentManagement";
-import ATPDocumentGenerator from "./components/DocumentManagement/ATPDocumentGenerator";
 import TaskManagement from "./components/TaskManagement";
+import SystemAdministration from "./components/SystemAdministration";
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { WorkspaceProvider, useWorkspace } from './contexts/WorkspaceContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 import SiteManagement from "./components/SiteManagement";
 import ATPTest from "./components/ATPTest";
 import { LoginPage } from './components/auth/LoginPage';
-import { 
+import {
   Users, Database, FileText, MapPin, BarChart3, Settings,
-  Bell, Search, Menu, X, Home, User, Globe, Workflow, 
+  Bell, Search, Menu, X, Home, User, Globe, Workflow,
   TrendingUp, Clock, Plus, Package, Activity, LogOut, ListTodo,
-  CheckSquare
+  CheckSquare, Briefcase, ChevronDown, Shield
 } from 'lucide-react';
 import ATPTemplateManagement from './components/ATPTemplateManagement/ATPTemplateManagement';
 import ATPManagement from './components/ATPManagement/ATPManagement';
 import { usePermissions } from './hooks/usePermissions';
 import './App.css';
+
+const BUILD_STAMP = "2025-12-29T09:54:14Z";
 
 // Keep all your existing TypeScript interfaces
 interface DashboardStats {
@@ -73,13 +76,32 @@ interface ModuleCardProps {
 
 const TeleCoreHomepage: React.FC = () => {
   const { user, logout } = useAuth();
+  const { currentWorkspace, userWorkspaces, activeConfigs, userRole, switchWorkspace } = useWorkspace();
   const { getAccessibleModules } = usePermissions();
   const [activeModule, setActiveModule] = useState<string>(() => {
     return localStorage.getItem('activeModule') || 'dashboard';
   });
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [workspaceMenuAnchor, setWorkspaceMenuAnchor] = useState<HTMLElement | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
+
+  // Close workspace dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (workspaceMenuAnchor && !workspaceMenuAnchor.contains(event.target as Node)) {
+        setWorkspaceMenuAnchor(null);
+      }
+    };
+
+    if (workspaceMenuAnchor) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [workspaceMenuAnchor]);
 
   // Fetch data from API
   useEffect(() => {
@@ -212,16 +234,16 @@ const TeleCoreHomepage: React.FC = () => {
     },
     {
       id: 'atp-process-management',
-      name: 'ATP Process Management',
+      name: 'My Inbox',
       icon: Workflow,
-      description: 'Upload ATP documents and manage approval workflow',
+      description: 'Review and approve ATP documents',
       color: 'bg-emerald-500',
       subModules: [
-        'Document Upload',
-        'Document Review',
+        'Pending Approvals',
+        'Review Queue',
         'Approval Workflow',
         'Status Tracking',
-        'Submit for Approval'
+        'Submission History'
       ]
     },
     {
@@ -270,13 +292,9 @@ const TeleCoreHomepage: React.FC = () => {
 
   // Filter modules based on user permissions
   const accessibleModules = getAccessibleModules();
-  const isAdmin = user?.role === 'admin' || user?.role === 'Administrator';
-  const modules = isAdmin ? allModules : 
-    allModules.filter(module => 
-      module.id === 'dashboard' || 
-      (module.id === 'site-management' && accessibleModules.includes('sites')) ||
-      (module.id === 'task-management' && accessibleModules.includes('tasks'))
-    );
+  const modules = accessibleModules === 'all'
+    ? allModules
+    : allModules.filter((module) => accessibleModules.includes(module.id));
 
   // Component definitions
   const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon: Icon, color }) => (
@@ -488,21 +506,133 @@ const TeleCoreHomepage: React.FC = () => {
   const Header = () => (
     <header className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
       <div className="flex items-center justify-between">
-        {/* Mobile menu button */}
+        {/* Left section: Menu button + Title + Badges */}
         <div className="flex items-center">
+          {/* Mobile menu button */}
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="p-2 rounded-lg hover:bg-gray-100 lg:hidden mr-4"
           >
             <Menu className="w-6 h-6 text-gray-600" />
           </button>
-          
-          <h1 className="text-lg md:text-xl font-semibold text-gray-900">
-            {activeModule === 'dashboard' ? 'Dashboard' : modules.find(m => m.id === activeModule)?.name || 'Module'}
-          </h1>
+
+          <div className="flex items-center space-x-3">
+            <h1 className="text-lg md:text-xl font-semibold text-gray-900">
+              {activeModule === 'dashboard' ? 'Dashboard' : modules.find(m => m.id === activeModule)?.name || 'Module'}
+            </h1>
+
+            {/* Environment Badge - Enhanced with hostname */}
+            {process.env.REACT_APP_ENVIRONMENT === 'staging' && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200" title={`Host: ${window.location.hostname}`}>
+                🟡 STAGING | {window.location.hostname}
+              </span>
+            )}
+
+            {/* Production Environment Badge */}
+            {process.env.REACT_APP_ENVIRONMENT === 'production' && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200" title={`Host: ${window.location.hostname}`}>
+                🔴 PRODUCTION | {window.location.hostname}
+              </span>
+            )}
+
+            {/* Active Config Badge */}
+            {activeConfigs && activeConfigs.length > 0 && (
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
+                  activeConfigs[0].status === 'ACTIVE'
+                    ? 'bg-green-100 text-green-800 border-green-200'
+                    : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                }`}
+                title={`Config Version: ${activeConfigs[0].versionNumber}, Status: ${activeConfigs[0].status}`}
+              >
+                ⚙️ Config v{activeConfigs[0].versionNumber} ({activeConfigs[0].status})
+              </span>
+            )}
+          </div>
         </div>
-        
+
+        {/* Right section: Workspace switcher + Search + Notifications + User info */}
         <div className="flex items-center space-x-3 md:space-x-4">
+          {/* Workspace Switcher */}
+          {userWorkspaces && userWorkspaces.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={(e) => setWorkspaceMenuAnchor(e.currentTarget)}
+                className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 border border-gray-300 transition-colors"
+                title="Current Workspace"
+              >
+                <Briefcase className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700 hidden sm:inline">
+                  {currentWorkspace?.name || 'Select Workspace'}
+                </span>
+                <ChevronDown className="w-4 h-4 text-gray-600" />
+              </button>
+
+              {/* Workspace Dropdown Menu */}
+              {workspaceMenuAnchor && (
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="py-1">
+                    <div className="px-4 py-2 border-b border-gray-200">
+                      <p className="text-xs font-semibold text-gray-500 uppercase">Your Workspaces</p>
+                    </div>
+                    {userWorkspaces.map((membership) => (
+                      <button
+                        key={membership.workspaceId}
+                        onClick={() => {
+                          switchWorkspace(membership.workspaceId);
+                          setWorkspaceMenuAnchor(null);
+                        }}
+                        className={`w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center justify-between ${
+                          currentWorkspace?.id === membership.workspaceId ? 'bg-blue-50 border-l-4 border-blue-600' : ''
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Briefcase className="w-4 h-4 text-gray-600" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{membership.workspace.name}</p>
+                            <p className="text-xs text-gray-500">{membership.workspace.code}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                              membership.role === 'ADMIN'
+                                ? 'bg-purple-100 text-purple-800'
+                                : membership.role === 'MANAGER'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {membership.role}
+                          </span>
+                          {membership.isDefault && (
+                            <span className="ml-1 text-xs text-gray-400">(Default)</span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* User Role Badge (if not in workspace switcher) */}
+          {userRole && (!userWorkspaces || userWorkspaces.length === 0) && (
+            <span
+              className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                userRole === 'ADMIN'
+                  ? 'bg-purple-100 text-purple-800'
+                  : userRole === 'MANAGER'
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'bg-gray-100 text-gray-800'
+              }`}
+            >
+              <Shield className="w-3 h-3 mr-1" />
+              {userRole}
+            </span>
+          )}
+
           {/* Search - hidden on small screens */}
           <div className="relative hidden sm:block">
             <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
@@ -512,7 +642,7 @@ const TeleCoreHomepage: React.FC = () => {
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
             />
           </div>
-          
+
           {/* Notifications */}
           <div className="relative">
             <Bell className="w-5 h-5 text-gray-600" />
@@ -520,12 +650,12 @@ const TeleCoreHomepage: React.FC = () => {
               3
             </span>
           </div>
-          
+
           {/* User info - responsive */}
           <div className="flex items-center space-x-2">
             <div className="hidden sm:block text-right">
               <div className="text-sm font-medium text-gray-900">{user?.username}</div>
-              <div className="text-xs text-gray-600">{user?.role}</div>
+              <div className="text-xs text-gray-600">{userRole || user?.role}</div>
             </div>
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
               <User className="w-4 h-4 text-white" />
@@ -538,7 +668,7 @@ const TeleCoreHomepage: React.FC = () => {
 
   // Use same responsive layout for ALL modules
   return (
-    <div className="min-h-screen bg-gray-50 lg:flex">
+    <div className="min-h-screen bg-gray-50 lg:flex" data-build={BUILD_STAMP}>
       <Sidebar />
       
       {/* Main Content - Consistent Layout for All Modules */}
@@ -771,6 +901,8 @@ const TeleCoreHomepage: React.FC = () => {
                   <ATPTemplateManagement />
                 ) : activeModule === "atp-process-management" ? (
                   <ATPManagement />
+                ) : activeModule === "system-admin" ? (
+                  <SystemAdministration />
                 ) : (
                   <div className="text-center py-12 bg-white rounded-lg shadow-sm">
                     <div className="text-gray-500 mb-4">Module under development</div>
@@ -811,9 +943,11 @@ const AppContent: React.FC = () => {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <AppContent />
-      </Router>
+      <WorkspaceProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </WorkspaceProvider>
     </AuthProvider>
   );
 }

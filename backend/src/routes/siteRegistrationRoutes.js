@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
+const { validateBody } = require('../middleware/validator');
+const {
+  siteRegistrationSchema,
+  siteValidateSchema,
+  atpRequirementsLookupSchema
+} = require('../validations/siteRegistration');
 const prisma = new PrismaClient();
 
 // Get site registration dashboard stats
@@ -31,7 +37,7 @@ router.get('/dashboard/stats', async (req, res) => {
 });
 
 // Register single site
-router.post('/register', async (req, res) => {
+router.post('/register', validateBody(siteRegistrationSchema), async (req, res) => {
   try {
     const {
       customerSiteId,
@@ -174,6 +180,9 @@ router.post('/register', async (req, res) => {
 
   } catch (error) {
     console.error('Site registration error:', error);
+    if (error?.code === 'P2002') {
+      return res.status(400).json({ error: 'Site ID already exists' });
+    }
     res.status(500).json({ error: 'Failed to register site' });
   }
 });
@@ -181,8 +190,6 @@ router.post('/register', async (req, res) => {
 // Get registered sites with filters
 router.get('/sites', async (req, res) => {
   try {
-    const { region, status, atpType, dateRange, search } = req.query;
-    
     // Mock data for now
     const sites = [
       {
@@ -242,7 +249,7 @@ router.get('/sites', async (req, res) => {
 });
 
 // Validate site data
-router.post('/validate', async (req, res) => {
+router.post('/validate', validateBody(siteValidateSchema), async (req, res) => {
   try {
     const { customerSiteId, coordinates } = req.body;
     const errors = {};
@@ -283,7 +290,7 @@ router.post('/validate', async (req, res) => {
 });
 
 // Auto-determine ATP requirements based on activity
-router.post('/atp-requirements', async (req, res) => {
+router.post('/atp-requirements', validateBody(atpRequirementsLookupSchema), async (req, res) => {
   try {
     const { activityFlow } = req.body;
     

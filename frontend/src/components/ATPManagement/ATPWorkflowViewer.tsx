@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircle, Clock, AlertTriangle, XCircle, FileText, User } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { CheckCircle, Clock, AlertTriangle, XCircle, User } from 'lucide-react';
 
 interface WorkflowStage {
   stage: string;
@@ -27,11 +27,7 @@ const ATPWorkflowViewer: React.FC<ATPWorkflowViewerProps> = ({ atpId }) => {
   const [workflowData, setWorkflowData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchWorkflowStatus();
-  }, [atpId]);
-
-  const fetchWorkflowStatus = async () => {
+  const fetchWorkflowStatus = useCallback(async () => {
     try {
       const response = await fetch(`/api/v1/atp-workflow/${atpId}/workflow`);
       const data = await response.json();
@@ -43,7 +39,11 @@ const ATPWorkflowViewer: React.FC<ATPWorkflowViewerProps> = ({ atpId }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [atpId]);
+
+  useEffect(() => {
+    fetchWorkflowStatus();
+  }, [fetchWorkflowStatus]);
 
   const getStageIcon = (status: string, decision?: string) => {
     switch (status) {

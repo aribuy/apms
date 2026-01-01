@@ -7,15 +7,61 @@ app.set('trust proxy', 1);
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const swaggerUi = require('swagger-ui-express');
 const { PrismaClient } = require('@prisma/client');
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3011;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const REFRESH_TOKEN_TTL_DAYS = Number(process.env.REFRESH_TOKEN_TTL_DAYS || 30);
+const { loginLimiter, refreshLimiter } = require('./src/middleware/rateLimiter');
+const { validateBody } = require('./src/middleware/validator');
+const { loginSchema, refreshSchema } = require('./src/validations/auth');
+const { authenticateToken } = require('./src/middleware/auth');
+const swaggerSpec = require('./src/docs/swagger');
+
+const corsOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const defaultCorsOrigins = [
+  'https://apms.datacodesolution.com',
+  'https://apmsstaging.datacodesolution.com',
+  'http://localhost:3000'
+];
+const allowedOrigins = corsOrigins.length > 0 ? corsOrigins : defaultCorsOrigins;
 
 // Middleware
-app.use(helmet());
-app.use(cors());
+app.use(helmet({
+  frameguard: { action: 'deny' },
+  noSniff: true,
+  hsts: process.env.NODE_ENV === 'production' ? {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  } : false
+}));
+app.use((req, res, next) => {
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
 app.use(morgan('combined'));
 app.use(express.json());
 
@@ -25,84 +71,206 @@ app.use('/api/v1/site-registration', idempotencyCheck);
 app.use('/api/v1/atp/upload', idempotencyCheck);
 app.use('/api/v1/atp/bulk-upload', idempotencyCheck);
 
+const requireDocsAuth = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+  return next();
+};
+
+app.use('/api-docs', authenticateToken, requireDocsAuth, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));
 
-// Test users data - ATP Process Flow
-const testUsers = [
-  { id: '1', email: 'admin@aviat.com', username: 'admin', name: 'System Administrator', role: 'admin', status: 'ACTIVE', userType: 'INTERNAL' },
-  { id: '1a', email: 'admin@apms.com', username: 'admin', name: 'APMS Administrator', role: 'Administrator', status: 'ACTIVE', userType: 'INTERNAL' },
-  { id: '2', email: 'doc.control@aviat.com', username: 'doc.control', name: 'Document Control', role: 'DOC_CONTROL', status: 'ACTIVE', userType: 'INTERNAL' },
-  { id: '3', email: 'business.ops@xlsmart.co.id', username: 'business.ops', name: 'Business Operations', role: 'BO', status: 'ACTIVE', userType: 'CUSTOMER' },
-  { id: '4', email: 'sme.team@xlsmart.co.id', username: 'sme.team', name: 'SME Team', role: 'SME', status: 'ACTIVE', userType: 'CUSTOMER' },
-  { id: '5', email: 'noc.head@xlsmart.co.id', username: 'noc.head', name: 'Head NOC', role: 'HEAD_NOC', status: 'ACTIVE', userType: 'CUSTOMER' },
-  { id: '6', email: 'fop.rts@xlsmart.co.id', username: 'fop.rts', name: 'FOP RTS', role: 'FOP_RTS', status: 'ACTIVE', userType: 'CUSTOMER' },
-  { id: '7', email: 'region.team@xlsmart.co.id', username: 'region.team', name: 'Region Team', role: 'REGION_TEAM', status: 'ACTIVE', userType: 'CUSTOMER' },
-  { id: '8', email: 'rth.head@xlsmart.co.id', username: 'rth.head', name: 'RTH Head', role: 'RTH', status: 'ACTIVE', userType: 'CUSTOMER' },
-  { id: '9', email: 'vendor.zte@gmail.com', username: 'vendor.zte', name: 'ZTE Vendor', role: 'VENDOR', status: 'ACTIVE', userType: 'VENDOR' },
-  { id: '10', email: 'vendor.hti@gmail.com', username: 'vendor.hti', name: 'HTI Vendor', role: 'VENDOR', status: 'ACTIVE', userType: 'VENDOR' }
-];
+const logger = require('./src/utils/logger');
 
-// Basic auth routes (simplified for now)
-app.post('/api/v1/auth/login', async (req, res) => {
+// Basic auth routes - Database backed with fallback to hardcoded
+const bcrypt = require('bcryptjs');
+
+const hashRefreshToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+const generateRefreshToken = () => crypto.randomBytes(48).toString('hex');
+const getRefreshTokenExpiry = () => {
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_TTL_DAYS);
+  return expiresAt;
+};
+
+app.post('/api/v1/auth/login', loginLimiter, validateBody(loginSchema), async (req, res) => {
   const { email, password } = req.body;
-  
-  // For testing, accept test credentials
-  const testCredentials = {
-    // PT Aviat (Internal)
-    'admin@aviat.com': 'Admin123!',
-    'admin@apms.com': 'Admin123!',
-    'doc.control@aviat.com': 'test123',
-    
-    // PT XLSMART (Customer Approvers)
-    'business.ops@xlsmart.co.id': 'test123',
-    'sme.team@xlsmart.co.id': 'test123', 
-    'noc.head@xlsmart.co.id': 'test123',
-    'fop.rts@xlsmart.co.id': 'test123',
-    'region.team@xlsmart.co.id': 'test123',
-    'rth.head@xlsmart.co.id': 'test123',
-    
-    // External Vendors
-    'vendor.zte@gmail.com': 'test123',
-    'vendor.hti@gmail.com': 'test123',
-    'mw.vendor@gmail.com': 'test123'
-  };
-  
-  if (testCredentials[email] && testCredentials[email] === password) {
-    res.json({
-      success: true,
-      message: 'Login successful',
-      data: {
-        user: {
-          id: 'user-' + Date.now(),
-          email: email,
-          username: email.split('@')[0],
-          role: (email === 'admin@aviat.com' || email === 'admin@apms.com') ? 'Administrator' :
-                email.includes('doc.control') ? 'DOC_CONTROL' :
-                email.includes('business.ops') ? 'BO' :
-                email.includes('sme.team') ? 'SME' :
-                email.includes('noc.head') ? 'HEAD_NOC' :
-                email.includes('fop.rts') ? 'FOP_RTS' :
-                email.includes('region.team') ? 'REGION_TEAM' :
-                email.includes('rth.head') ? 'RTH' :
-                email === 'mw.vendor@gmail.com' ? 'VENDOR_MW' :
-                email.includes('vendor') ? 'VENDOR' : 'USER'
-        },
-        accessToken: 'test-token-' + Date.now(),
-        refreshToken: 'refresh-token-' + Date.now(),
-        expiresIn: '15m'
+
+  try {
+    // Try database authentication first using raw query (only if prisma is available)
+    if (prisma && prisma.$queryRaw) {
+      try {
+        const users = await prisma.$queryRaw`
+          SELECT id, email, username, password_hash as "passwordHash", role
+          FROM users
+          WHERE email = ${email}
+          LIMIT 1
+        `;
+
+        const user = users[0];
+
+        if (user && user.passwordHash) {
+          // Verify password with bcrypt
+          const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+
+          if (isValidPassword) {
+            // Generate JWT token
+            const token = jwt.sign(
+              {
+                id: user.id,
+                email: user.email,
+                username: user.username,
+                role: user.role
+              },
+              JWT_SECRET,
+              { expiresIn: '24h' }
+            );
+
+            const refreshToken = generateRefreshToken();
+            const refreshTokenHash = hashRefreshToken(refreshToken);
+            const refreshTokenExpiresAt = getRefreshTokenExpiry();
+
+            try {
+              await prisma.refresh_tokens.deleteMany({
+                where: { user_id: user.id }
+              });
+              await prisma.refresh_tokens.create({
+                data: {
+                  id: crypto.randomUUID(),
+                  token: refreshTokenHash,
+                  user_id: user.id,
+                  expires_at: refreshTokenExpiresAt
+                }
+              });
+            } catch (tokenError) {
+              logger.error({ err: tokenError }, 'Failed to store refresh token');
+              return res.status(500).json({
+                success: false,
+                error: 'Failed to create refresh token'
+              });
+            }
+
+            return res.json({
+              success: true,
+              message: 'Login successful',
+              data: {
+                user: {
+                  id: user.id,
+                  email: user.email,
+                  username: user.username,
+                  role: user.role
+                },
+                accessToken: token,
+                refreshToken,
+                expiresIn: '24h'
+              }
+            });
+          } else {
+            logger.warn({ email }, 'Invalid password');
+          }
+        }
+      } catch (dbError) {
+        logger.error({ err: dbError }, 'Database auth failed');
       }
-    });
-  } else {
+    }
+
     res.status(401).json({
       success: false,
       error: 'Invalid credentials'
+    });
+  } catch (error) {
+    logger.error({ err: error }, 'Login error');
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
     });
   }
 });
 
 app.post('/api/v1/auth/logout', (req, res) => {
+  const { refreshToken } = req.body || {};
+  if (refreshToken) {
+    const refreshTokenHash = hashRefreshToken(refreshToken);
+    prisma.refresh_tokens.deleteMany({ where: { token: refreshTokenHash } })
+      .catch((error) => logger.error({ err: error }, 'Failed to revoke refresh token'));
+  }
   res.json({ success: true, message: 'Logged out successfully' });
+});
+
+app.post('/api/v1/auth/refresh', refreshLimiter, validateBody(refreshSchema), async (req, res) => {
+  try {
+    const { refreshToken } = req.body || {};
+    if (!refreshToken) {
+      return res.status(400).json({ success: false, error: 'Refresh token is required' });
+    }
+
+    const refreshTokenHash = hashRefreshToken(refreshToken);
+    const storedToken = await prisma.refresh_tokens.findUnique({
+      where: { token: refreshTokenHash }
+    });
+
+    if (!storedToken) {
+      return res.status(401).json({ success: false, error: 'Invalid refresh token' });
+    }
+
+    if (storedToken.expires_at < new Date()) {
+      await prisma.refresh_tokens.deleteMany({ where: { token: refreshTokenHash } });
+      return res.status(401).json({ success: false, error: 'Refresh token expired' });
+    }
+
+    const user = await prisma.users.findUnique({
+      where: { id: storedToken.user_id }
+    });
+
+    if (!user) {
+      await prisma.refresh_tokens.deleteMany({ where: { token: refreshTokenHash } });
+      return res.status(401).json({ success: false, error: 'User not found' });
+    }
+
+    const newAccessToken = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    const nextRefreshToken = generateRefreshToken();
+    const nextRefreshTokenHash = hashRefreshToken(nextRefreshToken);
+    const nextRefreshTokenExpiresAt = getRefreshTokenExpiry();
+
+    await prisma.refresh_tokens.deleteMany({ where: { token: refreshTokenHash } });
+    await prisma.refresh_tokens.create({
+      data: {
+        id: crypto.randomUUID(),
+        token: nextRefreshTokenHash,
+        user_id: user.id,
+        expires_at: nextRefreshTokenExpiresAt
+      }
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        accessToken: newAccessToken,
+        refreshToken: nextRefreshToken,
+        expiresIn: '24h'
+      }
+    });
+  } catch (error) {
+    logger.error({ err: error }, 'Refresh token error');
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to refresh token'
+    });
+  }
 });
 
 // Health check endpoint
@@ -118,11 +286,10 @@ app.get('/api/health', (req, res) => {
 // Dashboard stats endpoint
 app.get('/api/dashboard/stats', async (req, res) => {
   try {
-    const [userCount, siteCount, docCount, activityCount] = await Promise.all([
-      prisma.user.count(),
+    const [userCount, siteCount, docCount] = await Promise.all([
+      prisma.users.count(),
       prisma.site.count(),
-      prisma.document.count(),
-      prisma.activityLog.count()
+      prisma.documents.count()
     ]);
 
     // Calculate active sites and pending documents
@@ -130,7 +297,7 @@ app.get('/api/dashboard/stats', async (req, res) => {
       where: { status: 'ACTIVE' } 
     });
     
-    const pendingDocs = await prisma.document.count({ 
+    const pendingDocs = await prisma.documents.count({ 
       where: { status: 'PENDING_REVIEW' } 
     });
 
@@ -254,45 +421,10 @@ app.get('/api/v1/roles', (req, res) => {
   res.json({ success: true, data: roles });
 });
 
-app.put('/api/v1/users/:id/role', (req, res) => {
-  const { id } = req.params;
-  const { role } = req.body;
-  const userIndex = testUsers.findIndex(u => u.id === id);
-  
-  if (userIndex === -1) {
-    return res.status(404).json({ success: false, error: 'User not found' });
-  }
-  
-  testUsers[userIndex].role = role;
-  res.json({ success: true, data: testUsers[userIndex] });
-});
-
-// Helper functions
-function getRelativeTime(date) {
-  const now = new Date();
-  const diffMs = now - new Date(date);
-  const diffMins = Math.floor(diffMs / 60000);
-  
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} minutes ago`;
-  if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
-  return `${Math.floor(diffMins / 1440)} days ago`;
-}
-
-function determineActivityType(action) {
-  const actionLower = action.toLowerCase();
-  if (actionLower.includes('site')) return 'site';
-  if (actionLower.includes('user')) return 'user';
-  if (actionLower.includes('document')) return 'document';
-  if (actionLower.includes('workflow')) return 'workflow';
-  return 'system';
-}
-
-// User Management Routes
-
 // Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
+app.use((err, req, res, _next) => {
+  void _next;
+  logger.error({ err }, 'Unhandled server error');
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
@@ -303,6 +435,8 @@ const userRoutes = require("./src/routes/userRoutes");
 const documentRoutes = require("./src/routes/documentRoutes");
 // const eatpDocumentRoutes = require("./src/routes/documentRoutes");
 const taskRoutes = require("./src/routes/taskRoutes");
+const workspaceRoutes = require("./src/routes/workspaceRoutes");
+const auditRoutes = require("./src/routes/auditRoutes");
 
 app.use("/api/v1/organizations", organizationRoutes);
 app.use("/api/v1/workgroups", workgroupRoutes);
@@ -322,6 +456,9 @@ app.use("/api/v1/scopes", require("./src/routes/scopeRoutes"));
 app.use("/api/v1/site-registration", require("./src/routes/siteRegistrationRoutes"));
 app.use("/api/v1/tasks/history", require("./src/routes/taskHistoryRoutes"));
 app.use("/api/v1/atp-generator", require("./src/routes/atpDocumentGeneratorRoutes"));
+app.use("/api/v1/user", require("./src/routes/workspaceContextRoutes"));
+app.use("/api/v1", workspaceRoutes);
+app.use("/api/v1/audit", auditRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -330,7 +467,7 @@ app.use((req, res) => {
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
-  console.log('Shutting down gracefully...');
+  logger.info('Shutting down gracefully...');
   await prisma.$disconnect();
   process.exit();
 });
@@ -341,7 +478,29 @@ module.exports = app;
 // Start server only if not in test mode
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`AMPS API server running on localhost:${PORT}`);
-    console.log('Database: Connected via Prisma');
+    logger.info(`AMPS API server running on localhost:${PORT}`);
+    logger.info('Database: Connected via Prisma');
   });
+} else {
+  const originalListen = app.listen.bind(app);
+  app.listen = (port, host, backlog, cb) => {
+    let resolvedHost = host;
+    let resolvedBacklog = backlog;
+    let resolvedCb = cb;
+
+    if (typeof host === 'function') {
+      resolvedCb = host;
+      resolvedHost = '127.0.0.1';
+      resolvedBacklog = undefined;
+    } else if (typeof backlog === 'function') {
+      resolvedCb = backlog;
+      resolvedBacklog = undefined;
+    }
+
+    if (!resolvedHost) {
+      resolvedHost = '127.0.0.1';
+    }
+
+    return originalListen(port, resolvedHost, resolvedBacklog, resolvedCb);
+  };
 }

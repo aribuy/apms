@@ -70,6 +70,15 @@ const validateSiteCode = (code) => {
     errors.push('Site code must contain only uppercase letters, numbers, hyphens, and underscores');
   }
 
+  const parts = code.split('-');
+  if (parts.length < 2 || parts.length > 3) {
+    errors.push('Site code must include 1-2 hyphens');
+  }
+
+  if (!/^[A-Z]/.test(code)) {
+    errors.push('Site code must start with a letter');
+  }
+
   return {
     valid: errors.length === 0,
     errors: errors.length > 0 ? errors : undefined

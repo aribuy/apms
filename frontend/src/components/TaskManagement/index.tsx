@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ListTodo, Clock, FileText } from 'lucide-react';
+import React, { useState } from 'react';
+import { ListTodo, Clock } from 'lucide-react';
 import TaskList from './TaskList';
 
 const TaskManagement: React.FC = () => {

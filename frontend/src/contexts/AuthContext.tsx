@@ -57,12 +57,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await apiClient.post('/api/v1/auth/login', { email, password });
       
       if (response.data.success) {
-        const { user: userData, accessToken } = response.data.data;
-        
+        const { user: userData, accessToken, refreshToken } = response.data.data;
+
         localStorage.setItem('apms_token', accessToken);
         localStorage.setItem('apms_user', JSON.stringify(userData));
+        if (refreshToken) {
+          localStorage.setItem('apms_refresh_token', refreshToken);
+        }
+        // Store userId for hardcoded auth users (test-token)
+        if (accessToken.startsWith('test-token')) {
+          localStorage.setItem('apms_user_id', userData.id);
+        }
         setUser(userData);
-        
+
         return { success: true };
       } else {
         return { success: false, error: 'Login failed' };
@@ -77,11 +84,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    const refreshToken = localStorage.getItem('apms_refresh_token');
     localStorage.removeItem('apms_token');
     localStorage.removeItem('apms_user');
+    localStorage.removeItem('apms_user_id');
+    localStorage.removeItem('apms_user_role');
+    localStorage.removeItem('apms_current_workspace');
+    localStorage.removeItem('apms_refresh_token');
     setUser(null);
     // Optional: Call logout endpoint
-    apiClient.post('/api/v1/auth/logout').catch(() => {});
+    apiClient.post('/api/v1/auth/logout', { refreshToken }).catch(() => {});
   };
 
   useEffect(() => {

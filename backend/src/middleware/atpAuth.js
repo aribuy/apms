@@ -1,5 +1,3 @@
-const { canUploadATP, canReviewATP } = require('../utils/atpPermissions');
-
 const checkUploadPermission = (req, res, next) => {
   const userRole = req.user?.role || req.headers['x-user-role'] || 'USER';
   

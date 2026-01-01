@@ -3,6 +3,7 @@ import {
   Search, UserPlus, Edit2, Trash2, X, Save, 
   Mail, Phone, Shield, CheckCircle, XCircle 
 } from 'lucide-react';
+import { apiClient } from '../../utils/apiClient';
 
 interface User {
   id: string;
@@ -27,6 +28,35 @@ interface FormData {
   isActive: boolean;
 }
 
+interface Workspace {
+  id: string;
+  code: string;
+  name: string;
+  is_active: boolean;
+}
+
+interface UserWorkspace {
+  workspaceId: string;
+  code: string;
+  name: string;
+  role: string;
+  isDefault: boolean;
+}
+
+const WORKSPACE_ROLE_OPTIONS = [
+  'SUPERADMIN',
+  'ADMIN',
+  'DOC_CONTROL',
+  'BO',
+  'SME',
+  'HEAD_NOC',
+  'FOP_RTS',
+  'REGION_TEAM',
+  'RTH',
+  'VENDOR',
+  'MEMBER'
+];
+
 const UserList: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +64,14 @@ const UserList: React.FC = () => {
   const [filterRole, setFilterRole] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [userWorkspaces, setUserWorkspaces] = useState<UserWorkspace[]>([]);
+  const [workspaceAssignment, setWorkspaceAssignment] = useState({
+    workspaceId: '',
+    role: 'MEMBER',
+    isDefault: false
+  });
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     email: '',
     username: '',
@@ -50,20 +88,36 @@ const UserList: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const token = 'test';
-      const response = await fetch('/api/v1/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setUsers(data.data);
+      const response = await apiClient.get('/api/v1/users');
+      if (response.data?.success) {
+        setUsers(response.data.data);
       }
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWorkspaces = async () => {
+    try {
+      const response = await apiClient.get('/api/v1/workspaces');
+      if (response.data?.success) {
+        setWorkspaces(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching workspaces:', error);
+    }
+  };
+
+  const fetchUserWorkspaces = async (userId: string) => {
+    try {
+      const response = await apiClient.get(`/api/v1/users/${userId}/workspaces`);
+      if (response.data?.success) {
+        setUserWorkspaces(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching user workspaces:', error);
     }
   };
 
@@ -78,6 +132,12 @@ const UserList: React.FC = () => {
       role: user.userType || 'user',
       isActive: user.status === 'ACTIVE'
     });
+    fetchWorkspaces();
+    if (user.id) {
+      fetchUserWorkspaces(user.id);
+    }
+    setWorkspaceAssignment({ workspaceId: '', role: 'MEMBER', isDefault: false });
+    setWorkspaceError(null);
     setEditMode(true);
     setShowAddModal(true);
   };
@@ -86,19 +146,11 @@ const UserList: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
     
     try {
-      const token = 'test';
-      const response = await fetch(`/api/v1/users/delete/${userId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      const data = await response.json();
-      if (data.success) {
+      const response = await apiClient.delete(`/api/v1/users/delete/${userId}`);
+      if (response.data?.success) {
         fetchUsers();
       } else {
-        alert(data.error || 'Failed to delete user');
+        alert(response.data?.error || 'Failed to delete user');
       }
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -108,7 +160,6 @@ const UserList: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      const token = 'test';
       const endpoint = editMode 
         ? `/api/v1/users/update/${formData.id}`
         : '/api/v1/users/create';
@@ -123,22 +174,24 @@ const UserList: React.FC = () => {
         status: formData.isActive ? 'ACTIVE' : 'INACTIVE'
       };
       
-      const response = await fetch(endpoint, {
-        method: editMode ? 'PUT' : 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(apiData)
-      });
-      
-      const data = await response.json();
-      if (data.success) {
+      const response = editMode
+        ? await apiClient.put(endpoint, apiData)
+        : await apiClient.post(endpoint, apiData);
+
+      if (response.data?.success) {
+        const createdUserId = response.data?.data?.id;
+        if (!editMode && workspaceAssignment.workspaceId && createdUserId) {
+          await apiClient.post(`/api/v1/users/${createdUserId}/workspaces`, {
+            workspaceId: workspaceAssignment.workspaceId,
+            role: workspaceAssignment.role,
+            isDefault: workspaceAssignment.isDefault
+          });
+        }
         fetchUsers();
         setShowAddModal(false);
         resetForm();
       } else {
-        alert(data.error || 'Failed to save user');
+        alert(response.data?.error || 'Failed to save user');
       }
     } catch (error) {
       console.error('Error saving user:', error);
@@ -156,20 +209,10 @@ const UserList: React.FC = () => {
       role: 'user',
       isActive: true
     });
+    setUserWorkspaces([]);
+    setWorkspaceAssignment({ workspaceId: '', role: 'MEMBER', isDefault: false });
+    setWorkspaceError(null);
     setEditMode(false);
-  };
-
-  const getRoleColor = (role?: string) => {
-    const colors: any = {
-      'admin': 'bg-red-100 text-red-800',
-      'manager': 'bg-purple-100 text-purple-800',
-      'user': 'bg-blue-100 text-blue-800',
-      'viewer': 'bg-gray-100 text-gray-800',
-      'internal': 'bg-green-100 text-green-800',
-      'vendor': 'bg-purple-100 text-purple-800',
-      'tower_provider': 'bg-orange-100 text-orange-800'
-    };
-    return colors[(role || 'user').toLowerCase()] || 'bg-gray-100 text-gray-800';
   };
 
   const getTypeColor = (user: User) => {
@@ -240,6 +283,7 @@ const UserList: React.FC = () => {
         <button
           onClick={() => {
             resetForm();
+            fetchWorkspaces();
             setShowAddModal(true);
           }}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
@@ -334,7 +378,7 @@ const UserList: React.FC = () => {
       {/* Add/Edit Modal - keeping original form fields */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">
                 {editMode ? 'Edit User' : 'Add New User'}
@@ -446,6 +490,166 @@ const UserList: React.FC = () => {
                   </select>
                 </div>
               </div>
+            </div>
+
+            <div className="mt-6 border-t pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Workspace Access
+                </h3>
+                {workspaceError && (
+                  <span className="text-xs text-red-600">{workspaceError}</span>
+                )}
+              </div>
+
+              {editMode && (
+                <div className="space-y-3 mb-4">
+                  {userWorkspaces.length === 0 ? (
+                    <div className="text-xs text-gray-500">No workspace access assigned.</div>
+                  ) : (
+                    userWorkspaces.map((workspace) => (
+                      <div
+                        key={workspace.workspaceId}
+                        className="flex flex-col md:flex-row md:items-center md:justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
+                      >
+                        <div className="text-sm text-gray-700">
+                          {workspace.name} ({workspace.code})
+                          {workspace.isDefault && (
+                            <span className="ml-2 text-xs text-blue-600">(Default)</span>
+                          )}
+                        </div>
+                        <div className="mt-2 md:mt-0 flex items-center space-x-2">
+                          <select
+                            className="text-xs border rounded px-2 py-1"
+                            value={workspace.role}
+                            onChange={async (event) => {
+                              try {
+                                await apiClient.put(
+                                  `/api/v1/users/${formData.id}/workspaces/${workspace.workspaceId}`,
+                                  { role: event.target.value }
+                                );
+                                fetchUserWorkspaces(formData.id as string);
+                              } catch (error) {
+                                console.error('Failed to update workspace role', error);
+                                setWorkspaceError('Failed to update workspace role');
+                              }
+                            }}
+                          >
+                            {WORKSPACE_ROLE_OPTIONS.map((role) => (
+                              <option key={role} value={role}>
+                                {role}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            className="text-xs text-red-600 hover:text-red-700"
+                            onClick={async () => {
+                              try {
+                                await apiClient.delete(
+                                  `/api/v1/users/${formData.id}/workspaces/${workspace.workspaceId}`
+                                );
+                                fetchUserWorkspaces(formData.id as string);
+                              } catch (error) {
+                                console.error('Failed to remove workspace', error);
+                                setWorkspaceError('Failed to remove workspace');
+                              }
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Workspace
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                    value={workspaceAssignment.workspaceId}
+                    onChange={(e) => setWorkspaceAssignment({
+                      ...workspaceAssignment,
+                      workspaceId: e.target.value
+                    })}
+                  >
+                    <option value="">Select workspace</option>
+                    {workspaces.map((workspace) => (
+                      <option key={workspace.id} value={workspace.id}>
+                        {workspace.name} ({workspace.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Workspace Role
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                    value={workspaceAssignment.role}
+                    onChange={(e) => setWorkspaceAssignment({
+                      ...workspaceAssignment,
+                      role: e.target.value
+                    })}
+                  >
+                    {WORKSPACE_ROLE_OPTIONS.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <label className="flex items-center space-x-2 text-sm text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={workspaceAssignment.isDefault}
+                      onChange={(e) => setWorkspaceAssignment({
+                        ...workspaceAssignment,
+                        isDefault: e.target.checked
+                      })}
+                    />
+                    <span>Set as default</span>
+                  </label>
+                </div>
+              </div>
+
+              {editMode && (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    className="px-4 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800"
+                    onClick={async () => {
+                      if (!workspaceAssignment.workspaceId) {
+                        setWorkspaceError('Select a workspace to add');
+                        return;
+                      }
+                      try {
+                        await apiClient.post(`/api/v1/users/${formData.id}/workspaces`, {
+                          workspaceId: workspaceAssignment.workspaceId,
+                          role: workspaceAssignment.role,
+                          isDefault: workspaceAssignment.isDefault
+                        });
+                        setWorkspaceAssignment({ workspaceId: '', role: 'MEMBER', isDefault: false });
+                        setWorkspaceError(null);
+                        fetchUserWorkspaces(formData.id as string);
+                      } catch (error) {
+                        console.error('Failed to add workspace', error);
+                        setWorkspaceError('Failed to add workspace');
+                      }
+                    }}
+                  >
+                    Add Workspace
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 mt-6">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, CheckCircle, XCircle, AlertTriangle, Eye, FileText, User, Calendar } from 'lucide-react';
 
 interface ATPDocument {
@@ -42,12 +42,7 @@ const ReviewDashboard: React.FC<ReviewDashboardProps> = ({ userRole }) => {
     rejectedWeek: 0
   });
 
-  useEffect(() => {
-    fetchReviews();
-    fetchStats();
-  }, [userRole]);
-
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
       const response = await fetch(`/api/v1/atp/reviews/pending?role=${userRole}`);
       const pendingData = await response.json();
@@ -62,17 +57,22 @@ const ReviewDashboard: React.FC<ReviewDashboardProps> = ({ userRole }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userRole]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await fetch(`/api/v1/atp/reviews/stats?role=${userRole}`);
       const data = await response.json();
-      setStats(data || stats);
+      setStats(prev => data || prev);
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
-  };
+  }, [userRole]);
+
+  useEffect(() => {
+    fetchReviews();
+    fetchStats();
+  }, [fetchReviews, fetchStats]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

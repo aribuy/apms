@@ -1,0 +1,196 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.7.5 Chrome/126.0.6478.183 Electron/31.3.0 Safari/537.36" version="24.7.5">
+  <diagram name="ATP Approval Process v2" id="atp-approval-process-v2">
+    <mxGraphModel dx="1005" dy="614" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1200" background="#ffffff" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="TeleCore APMS - ATP Approval Process v2 (CORRECTED)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="900" y="10" width="500" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="phase0" value="PHASE 0: SITE REGISTRATION" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="80" y="50" width="150" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="phase1" value="PHASE 1: ATP SUBMISSION" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="280" y="50" width="150" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="phase2" value="PHASE 2: MULTI-STAGE REVIEW" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="480" y="50" width="170" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="phase3" value="PHASE 3: PUNCHLIST" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="700" y="50" width="150" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="phase4" value="PHASE 4: COMPLETION" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="900" y="50" width="150" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="vendor_lane" value="VENDOR/USER" style="swimlane;html=1;startSize=20;horizontal=1;containerType=tree;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="50" y="90" width="1800" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="start_event" value="User Registers Site" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontSize=10;" parent="vendor_lane" vertex="1">
+          <mxGeometry x="50" y="25" width="80" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="vendor_fixes" value="Upload Evidence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" parent="vendor_lane" vertex="1">
+          <mxGeometry x="1220" y="30" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="system_lane" value="ATP SYSTEM (APMS)" style="swimlane;html=1;startSize=20;horizontal=1;containerType=tree;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="50" y="150" width="1800" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="atp_required_gateway" value="ATP Required = YES?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" parent="system_lane" vertex="1">
+          <mxGeometry x="70" y="25" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="create_atp_task" value="Create ATP Task" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;" parent="system_lane" vertex="1">
+          <mxGeometry x="220" y="40" width="90" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="auto_categorization" value="Auto-Categorization" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="system_lane" vertex="1">
+          <mxGeometry x="330" y="40" width="90" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="workflow_init" value="Initialize Workflow" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;" parent="system_lane" vertex="1">
+          <mxGeometry x="480" y="35" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="final_approval" value="Final Approval" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="system_lane" vertex="1">
+          <mxGeometry x="1000" y="30" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="punchlist_created" value="Punchlist Created" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="system_lane" vertex="1">
+          <mxGeometry x="1120" y="30" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atp_completed" value="ATP Completed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;" parent="system_lane" vertex="1">
+          <mxGeometry x="1500" y="35" width="90" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="end_event" value="Process Complete" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontSize=10;" parent="system_lane" vertex="1">
+          <mxGeometry x="1690" y="25" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" parent="system_lane" source="atp_completed" target="end_event" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="doc_control_lane" value="DOCUMENT CONTROL" style="swimlane;html=1;startSize=20;horizontal=1;containerType=tree;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="50" y="230" width="1800" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="upload_atp" value="Upload ATP Document" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="doc_control_lane" vertex="1">
+          <mxGeometry x="160" y="25" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="critical_punchlist" value="Critical Issues (Blocking)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=9;" parent="doc_control_lane" vertex="1">
+          <mxGeometry x="720" y="20" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="qa_engineer_lane" value="QA ENGINEER (NEW ROLE)" style="swimlane;html=1;startSize=20;horizontal=1;containerType=tree;fillColor=#ffeaa7;strokeColor=#d63031;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="50" y="290" width="1800" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="qa_pre_approval" value="QA Pre-Approval" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffeaa7;strokeColor=#d63031;fontSize=10;fontStyle=1;" parent="qa_engineer_lane" vertex="1">
+          <mxGeometry x="435" y="25" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="qa_approval_gateway" value="QA Approve?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffeaa7;strokeColor=#d63031;fontSize=9;" parent="qa_engineer_lane" vertex="1">
+          <mxGeometry x="560" y="25" width="90" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="qa_validates_fix" value="QA Validates Evidence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffeaa7;strokeColor=#d63031;fontSize=9;fontStyle=1;" parent="qa_engineer_lane" vertex="1">
+          <mxGeometry x="1310" y="25" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="reviewers_lane" value="REVIEWERS (FOP/BO/RTH)" style="swimlane;html=1;startSize=20;horizontal=1;containerType=tree;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="50" y="350" width="1800" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="review_stage_1" value="Review Stage 1 (BO/FOP)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" parent="reviewers_lane" vertex="1">
+          <mxGeometry x="640" y="30" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="review_decision_1" value="Decision?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" parent="reviewers_lane" vertex="1">
+          <mxGeometry x="760" y="25" width="50" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="atp_rejected_qa" value="ATP Rejected (QA)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=9;" parent="reviewers_lane" vertex="1">
+          <mxGeometry x="490" y="40" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pic_lane" value="PIC (Original Reviewer)" style="swimlane;html=1;startSize=20;horizontal=1;containerType=tree;fillColor=#f8d7da;strokeColor=#721c24;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="50" y="465" width="1800" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="pic_reviews" value="PIC Reviews Evidence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8d7da;strokeColor=#721c24;fontSize=9;" parent="pic_lane" vertex="1">
+          <mxGeometry x="1410" y="25" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" parent="1" source="start_event" target="atp_required_gateway" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow2a" value="YES - PATH A" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#28a745;fontColor=#28a745;fontSize=9;fontStyle=1;" parent="1" source="atp_required_gateway" target="create_atp_task" edge="1">
+          <mxGeometry x="-0.0588" y="10" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow3a" value="Task Created" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" parent="1" source="create_atp_task" target="upload_atp" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow2b" value="NO - PATH B" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#007bff;fontColor=#007bff;fontSize=9;fontStyle=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="atp_required_gateway" target="upload_atp" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="360" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;" parent="1" source="upload_atp" target="auto_categorization" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="auto_categorization" target="qa_pre_approval" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" parent="1" source="qa_pre_approval" target="qa_approval_gateway" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow7" value="QA Approve" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#28a745;fontColor=#28a745;fontSize=9;fontStyle=1;" parent="1" source="qa_approval_gateway" target="workflow_init" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow8" value="QA Reject" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#dc3545;fontColor=#dc3545;fontSize=9;fontStyle=1;" parent="1" source="qa_approval_gateway" target="atp_rejected_qa" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" parent="1" source="workflow_init" target="review_stage_1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" parent="1" source="review_stage_1" target="review_decision_1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow11a" value="Approve" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#28a745;fontColor=#28a745;fontSize=9;fontStyle=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="review_decision_1" target="review_stage_2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow11b" value="Approve with Punchlist" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#ffc107;fontColor=#ffc107;fontSize=9;fontStyle=1;" parent="1" source="review_decision_1" target="punchlist_created" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1270" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow11c" value="Critical Issues" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#dc3545;fontColor=#dc3545;fontSize=9;fontStyle=1;" parent="1" source="review_decision_1" target="critical_punchlist" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" parent="1" source="review_stage_2" target="review_decision_2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow13" value="Final Approve" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#28a745;fontColor=#28a745;fontSize=9;fontStyle=1;" parent="1" source="review_decision_2" target="final_approval" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" parent="1" source="final_approval" target="punchlist_created" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" parent="1" source="punchlist_created" target="vendor_fixes" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" parent="1" source="vendor_fixes" target="qa_validates_fix" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow17" value="QA Validates" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#28a745;fontColor=#28a745;fontSize=9;fontStyle=1;" parent="1" source="qa_validates_fix" target="pic_reviews" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow18" value="PIC Approves" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#28a745;fontColor=#28a745;fontSize=9;fontStyle=1;" parent="1" source="pic_reviews" target="atp_completed" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_box" value="LEGEND:&#xa;• New Critical Step&#xa;• Process Lock&#xa;• Approval Path (Green)&#xa;• Rejection Path (Red)&#xa;• Major Change from v1&#xa;• Standard Flow (Black)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=10;align=left;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="50" y="520" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="changes_box" value="KEY CHANGES v2:&#xa;• Site Registration ATP Trigger&#xa;• ATP Task Creation and Tracking&#xa;• QA Engineer Pre-Approval&#xa;• QA + PIC Punchlist Validation&#xa;• Blocking vs Non-Blocking Logic&#xa;• Two Path Entry (A and B)&#xa;• ATP Resubmission Support" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=10;align=left;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="300" y="520" width="250" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="categories_box" value="WORKFLOW CATEGORIES:&#xa;• RAN_MW: FOP to REGION to RTH (5d)&#xa;• PLN_UPGRADE: ROH to RTH (3d)&#xa;• DISMANTLE_DROP: FOP to REGION to PMO (6d)&#xa;• DISMANTLE_KEEP: ROH to RTH (3d)&#xa;• SOFTWARE_LICENSE: BO to SME to HEAD_NOC (5d)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=10;align=left;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="600" y="520" width="280" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="path_a_label" value="PATH A: From Site Registration" style="text;html=1;strokeColor=none;fillColor=#e8f5e8;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fontSize=9;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="60" y="480" width="150" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="path_b_label" value="PATH B: Independent Submission" style="text;html=1;strokeColor=none;fillColor=#e3f2fd;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fontSize=9;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="330" y="480" width="150" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="review_stage_2" value="Review Stage 2 (SME/RTH)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="890" y="430" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="review_decision_2" value="Decision?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" parent="1" vertex="1">
+          <mxGeometry x="1030" y="425" width="50" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

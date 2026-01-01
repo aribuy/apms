@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  Users, Building2, Users2, Briefcase, Shield, Settings,
-  UserCircle, ChevronRight, Menu, X
+  Building2, Users2, Briefcase, Shield, Settings,
+  UserCircle, Layers
 } from 'lucide-react';
 
 // Import sub-components
@@ -10,8 +10,9 @@ import RoleManagement from './RoleManagement';
 import PermissionMapping from './PermissionMapping';
 import OrganizationManagement from '../OrganizationManagement/OrganizationManagement';
 import WorkgroupManagement from '../WorkgroupManagement/WorkgroupManagement';
+import WorkspaceManagement from './WorkspaceManagement';
 
-type TabType = 'users' | 'roles' | 'permissions' | 'teams' | 'workgroups' | 'organizations';
+type TabType = 'users' | 'roles' | 'permissions' | 'teams' | 'workgroups' | 'organizations' | 'workspaces';
 
 interface TabItem {
   id: TabType;
@@ -43,6 +44,12 @@ const UserManagement: React.FC = () => {
       description: 'Map roles to system modules'
     },
     {
+      id: 'workspaces',
+      label: 'Workspace Management',
+      icon: <Layers className="w-5 h-5" />,
+      description: 'Create workspaces and manage members'
+    },
+    {
       id: 'teams',
       label: 'Team Management',
       icon: <Users2 className="w-5 h-5" />,
@@ -70,6 +77,8 @@ const UserManagement: React.FC = () => {
         return <RoleManagement />;
       case 'permissions':
         return <PermissionMapping />;
+      case 'workspaces':
+        return <WorkspaceManagement />;
       case 'teams':
         return <TeamManagement />;
       case 'workgroups':

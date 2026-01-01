@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  Plus, Search, Grid, Edit, Copy, Trash2, 
-  BarChart3, CheckCircle, Eye
+  Plus, Search, Edit, Copy, Trash2, 
+  BarChart3, Eye
 } from 'lucide-react';
 import TemplateBuilder from './TemplateBuilder';
 import TemplatePreview from './TemplatePreview';
@@ -30,13 +30,7 @@ const ATPTemplateManagement: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [currentView, setCurrentView] = useState<'list' | 'builder' | 'preview'>('list');
   const [editingTemplateId, setEditingTemplateId] = useState<string | undefined>();
-  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
-
-  useEffect(() => {
-    fetchTemplates();
-  }, [filters]);
-
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (filters.search) params.append('search', filters.search);
@@ -54,7 +48,11 @@ const ATPTemplateManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
 
   const handleCloneTemplate = async (templateId: string) => {
     try {

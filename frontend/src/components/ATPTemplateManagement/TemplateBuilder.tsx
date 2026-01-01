@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2, Save, Eye } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 
 interface ChecklistItem {
   id: number;
@@ -43,13 +43,8 @@ const TemplateBuilder: React.FC<TemplateBuilderProps> = ({ templateId, onBack })
   const [loading, setLoading] = useState(false);
   const [zoomedPhoto, setZoomedPhoto] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (templateId) {
-      fetchTemplate();
-    }
-  }, [templateId]);
-
-  const fetchTemplate = async () => {
+  const fetchTemplate = useCallback(async () => {
+    if (!templateId) return;
     try {
       const response = await fetch(`http://localhost:3011/api/v1/atp-templates/${templateId}`);
       const data = await response.json();
@@ -78,7 +73,11 @@ const TemplateBuilder: React.FC<TemplateBuilderProps> = ({ templateId, onBack })
     } catch (error) {
       console.error('Error fetching template:', error);
     }
-  };
+  }, [templateId]);
+
+  useEffect(() => {
+    fetchTemplate();
+  }, [fetchTemplate]);
 
   const handleSave = async () => {
     setLoading(true);
@@ -90,7 +89,6 @@ const TemplateBuilder: React.FC<TemplateBuilderProps> = ({ templateId, onBack })
         version: templateData.version,
         scope: templateData.scope
       };
-      console.log('Saving template data:', cleanedData);
       
       const url = templateId 
         ? `/api/v1/atp-templates/${templateId}`
@@ -103,7 +101,6 @@ const TemplateBuilder: React.FC<TemplateBuilderProps> = ({ templateId, onBack })
       });
       
       const data = await response.json();
-      console.log('Save response:', data);
       
       if (data.success) {
         alert('Template saved successfully!');

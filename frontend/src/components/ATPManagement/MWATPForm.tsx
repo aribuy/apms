@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Radio, Antenna, Settings, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Radio, Settings, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import DigitalFormBuilder from './DigitalFormBuilder';
 
 interface MWATPFormProps {

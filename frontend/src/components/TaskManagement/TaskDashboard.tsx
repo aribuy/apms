@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, Clock, AlertTriangle, Users, FileText, Upload } from 'lucide-react';
 import TaskList from './TaskList';
+import { apiClient } from '../../utils/apiClient';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
 
 interface TaskStats {
   total: number;
@@ -10,6 +12,7 @@ interface TaskStats {
 }
 
 const TaskDashboard: React.FC = () => {
+  const { currentWorkspace } = useWorkspace();
   const [activeView, setActiveView] = useState<'all' | 'pending'>('pending');
   const [stats, setStats] = useState<TaskStats>({
     total: 0,
@@ -17,20 +20,21 @@ const TaskDashboard: React.FC = () => {
     completed: 0,
     overdue: 0
   });
-  const [userRole, setUserRole] = useState(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const [userRole] = useState(() => {
+    const user = JSON.parse(localStorage.getItem('apms_user') || '{}');
     return user.role || 'DOC_CONTROL';
   });
 
-  useEffect(() => {
-    fetchTaskStats();
-  }, [userRole]);
-
-  const fetchTaskStats = async () => {
+  const fetchTaskStats = useCallback(async () => {
     try {
-      const response = await fetch(`http://localhost:3011/api/v1/tasks?assigned_role=${userRole}`);
-      if (response.ok) {
-        const data = await response.json();
+      const response = await apiClient.get('/api/v1/tasks', {
+        params: {
+          assigned_role: userRole,
+          workspaceId: currentWorkspace?.id
+        }
+      });
+      if (response.status === 200) {
+        const data = response.data;
         const tasks = data.success ? data.data : data;
         
         const pending = tasks.filter((t: any) => t.status === 'pending').length;
@@ -50,7 +54,11 @@ const TaskDashboard: React.FC = () => {
     } catch (error) {
       console.error('Error fetching task stats:', error);
     }
-  };
+  }, [currentWorkspace?.id, userRole]);
+
+  useEffect(() => {
+    fetchTaskStats();
+  }, [fetchTaskStats]);
 
   const getRoleDisplayName = (role: string) => {
     const roleNames: { [key: string]: string } = {

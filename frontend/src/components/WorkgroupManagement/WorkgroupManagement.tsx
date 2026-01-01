@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, Plus, Edit2, Trash2, UserPlus, UserMinus, 
-  X, Save, Search, Filter, Building2, Mail, User
+  X, Save, Search, Building2, Mail, User as UserIcon
 } from 'lucide-react';
 
 interface Workgroup {
@@ -549,7 +549,7 @@ const WorkgroupManagement: React.FC = () => {
                 {selectedWorkgroup.members.map(member => (
                   <div key={member.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                     <div className="flex items-center">
-                      <User className="w-5 h-5 mr-3 text-gray-500" />
+                      <UserIcon className="w-5 h-5 mr-3 text-gray-500" />
                       <div>
                         <div className="font-medium">
                           {member.user?.firstName} {member.user?.lastName}

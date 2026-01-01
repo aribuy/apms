@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Super Admin Login - APMS Staging</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .info-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .credential {
+            background: #f0f7ff;
+            border: 2px solid #007bff;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .button {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+            font-weight: bold;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #28a745;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="info-box">
+        <h1>🔐 Super Admin Login - APMS Staging</h1>
+
+        <div class="success">
+            <h3>Credentials:</h3>
+            <div class="credential">
+                <strong>Email:</strong> superadmin@apms.com<br>
+                <strong>Password:</strong> SuperAdmin123<br>
+                <small style="color: #666;">⚠️ PERHATIKAN: Password TANPA tanda seru (!)</small>
+            </div>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ Jika "Super Admin" tidak muncul di Test Credentials:</h3>
+            <p>Ini karena browser cache. Lakukan salah satu:</p>
+            <ol>
+                <li><strong>Hard Refresh:</strong> Tekan <code>Ctrl+Shift+R</code> (Windows) atau <code>Cmd+Shift+R</code> (Mac)</li>
+                <li><strong>Atau Clear Cache:</strong> Tekan <code>F12</code> → Klik kanan tombol refresh → Pilih "Empty Cache and Hard Reload"</li>
+                <li><strong>Atau buka Incognito/Private mode</strong></li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="https://apmsstaging.datacodesolution.com/?cb=<?php echo time(); ?>" class="button">
+                🚀 Buka APMS Staging
+            </a>
+        </div>
+
+        <div class="info-box" style="margin-top: 30px;">
+            <h3>📋 Cara Manual Login:</h3>
+            <ol>
+                <li>Klik tombol "Buka APMS Staging" di atas</li>
+                <li>Ketik email: <code>superadmin@apms.com</code></li>
+                <li>Ketik password: <code>SuperAdmin123</code> (TANPA tanda seru)</li>
+                <li>Klik "Sign in"</li>
+            </ol>
+        </div>
+
+        <div class="info-box">
+            <h3>ℹ️ Info:</h3>
+            <ul>
+                <li><strong>Role:</strong> SUPERADMIN</li>
+                <li><strong>Workspace:</strong> XLSMART Project by Aviat</li>
+                <li><strong>Status:</strong> Hardcoded Authentication (Database-free)</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Auto-redirect after 5 seconds with cache busting
+        setTimeout(function() {
+            window.location.href = 'https://apmsstaging.datacodesolution.com/?t=' + Date.now();
+        }, 5000);
+    </script>
+</body>
+</html>

@@ -55,28 +55,47 @@ const ATP_PERMISSIONS = {
 
 export const usePermissions = () => {
   const { user } = useAuth();
-  const userRole = user?.role || 'USER';
+  const rawRole = user?.role || 'USER';
+  const normalizedRole = rawRole === 'Administrator' ? 'ADMIN' : rawRole.toUpperCase();
 
   const canUploadATP = () => {
-    const permissions = ATP_PERMISSIONS[userRole];
+    const permissions = ATP_PERMISSIONS[normalizedRole];
     return permissions?.canUpload && permissions.canUpload.length > 0;
   };
 
   const canReviewATP = () => {
-    const permissions = ATP_PERMISSIONS[userRole];
+    const permissions = ATP_PERMISSIONS[normalizedRole];
     return permissions?.canReview && permissions.canReview.length > 0;
   };
 
   const hasModuleAccess = (module) => {
-    if (userRole === 'admin' || userRole === 'Administrator') return true;
-    const permissions = ATP_PERMISSIONS[userRole];
-    return permissions?.modules?.includes(module) || false;
+    if (normalizedRole === 'SUPERADMIN') return true;
+    if (normalizedRole === 'ADMIN') {
+      return [
+        'dashboard',
+        'user-management',
+        'system-admin',
+        'site-management',
+        'task-management'
+      ].includes(module);
+    }
+
+    return ['site-management', 'task-management'].includes(module);
   };
 
   const getAccessibleModules = () => {
-    if (userRole === 'admin' || userRole === 'Administrator') return 'all';
-    const permissions = ATP_PERMISSIONS[userRole];
-    return permissions?.modules || [];
+    if (normalizedRole === 'SUPERADMIN') return 'all';
+    if (normalizedRole === 'ADMIN') {
+      return [
+        'dashboard',
+        'user-management',
+        'system-admin',
+        'site-management',
+        'task-management'
+      ];
+    }
+
+    return ['site-management', 'task-management'];
   };
 
   return {
@@ -84,6 +103,6 @@ export const usePermissions = () => {
     canReviewATP,
     hasModuleAccess,
     getAccessibleModules,
-    userRole
+    userRole: normalizedRole
   };
 };

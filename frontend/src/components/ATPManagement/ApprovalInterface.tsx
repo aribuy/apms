@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, AlertTriangle, FileText, Download, MessageSquare, Plus, Trash2 } from 'lucide-react';
 
 interface ChecklistItem {
@@ -44,11 +44,7 @@ const ApprovalInterface: React.FC<ApprovalInterfaceProps> = ({ atpId, userRole }
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchATPDetails();
-  }, [atpId]);
-
-  const fetchATPDetails = async () => {
+  const fetchATPDetails = useCallback(async () => {
     try {
       const response = await fetch(`/api/v1/atp/${atpId}`);
       const data = await response.json();
@@ -87,7 +83,11 @@ const ApprovalInterface: React.FC<ApprovalInterfaceProps> = ({ atpId, userRole }
     } finally {
       setLoading(false);
     }
-  };
+  }, [atpId]);
+
+  useEffect(() => {
+    fetchATPDetails();
+  }, [fetchATPDetails]);
 
   const handleChecklistUpdate = (itemId: string, field: string, value: any) => {
     setChecklistItems(prev => prev.map(item => 

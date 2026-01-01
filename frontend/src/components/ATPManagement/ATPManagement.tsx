@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, FileText, Eye, Send, Plus, Search } from 'lucide-react';
+import { apiClient } from '../../utils/apiClient';
 
 interface ATPDocument {
   id: string;
@@ -28,8 +29,8 @@ const ATPManagement: React.FC = () => {
 
   const fetchDocuments = async () => {
     try {
-      const response = await fetch('http://localhost:3011/api/v1/atp');
-      const data = await response.json();
+      const response = await apiClient.get('/api/v1/atp');
+      const data = response.data;
       if (data.success) {
         setDocuments(data.data || []);
       }
@@ -51,12 +52,8 @@ const ATPManagement: React.FC = () => {
     formData.append('document_type', uploadData.document_type);
 
     try {
-      const response = await fetch('http://localhost:3011/api/v1/atp/submit', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await response.json();
+      const response = await apiClient.post('/api/v1/atp/submit', formData);
+      const data = response.data;
       if (data.success) {
         alert('ATP document uploaded successfully!');
         setShowUploadModal(false);
@@ -76,12 +73,8 @@ const ATPManagement: React.FC = () => {
 
   const handleSubmitForApproval = async (docId: string) => {
     try {
-      const response = await fetch(`http://localhost:3011/api/v1/atp/${docId}/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const data = await response.json();
+      const response = await apiClient.post(`/api/v1/atp/${docId}/submit`, {});
+      const data = response.data;
       if (data.success) {
         alert('Document submitted for approval!');
         fetchDocuments();
@@ -105,20 +98,22 @@ const ATPManagement: React.FC = () => {
     }
   };
 
+  const pendingDocuments = documents.filter((doc) => doc.current_status !== 'approved');
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">ATP Process Management</h1>
-          <p className="text-gray-600">Upload and manage ATP documents for approval workflow</p>
+          <h1 className="text-2xl font-bold text-gray-900">My Inbox</h1>
+          <p className="text-gray-600">Review and approve ATP documents assigned to you</p>
         </div>
         <button
           onClick={() => setShowUploadModal(true)}
           className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus className="w-4 h-4" />
-          <span>Upload ATP Document</span>
+          <span>New Submission</span>
         </button>
       </div>
 
@@ -126,7 +121,7 @@ const ATPManagement: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">ATP Documents</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Approval Queue</h2>
             <div className="relative">
               <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
               <input
@@ -163,7 +158,7 @@ const ATPManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {documents.map((doc) => (
+              {pendingDocuments.map((doc) => (
                 <tr key={doc.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import ATPSubmission from './ATPSubmission';
 import ReviewDashboard from './ReviewDashboard';
 import ApprovalInterface from './ApprovalInterface';
@@ -15,7 +15,7 @@ const ATPProcessFlow: React.FC<ATPProcessFlowProps> = ({ userRole }) => {
   const [selectedAtpId, setSelectedAtpId] = useState<string | null>(null);
 
   // Determine available views based on user role
-  const getAvailableViews = () => {
+  const availableViews = useMemo(() => {
     const views = [];
     
     if (canUploadATP() || ['VENDOR', 'DOC_CONTROL'].includes(userRole || '')) {
@@ -29,21 +29,14 @@ const ATPProcessFlow: React.FC<ATPProcessFlowProps> = ({ userRole }) => {
     views.push({ key: 'punchlist', label: 'Punchlist Management', icon: '🔧' });
     
     return views;
-  };
-
-  const availableViews = getAvailableViews();
+  }, [canUploadATP, canReviewATP, userRole]);
   
   // Set default view based on available views
   useEffect(() => {
     if (availableViews.length > 0 && !availableViews.find(v => v.key === selectedView)) {
       setSelectedView(availableViews[0].key as any);
     }
-  }, [userRole]);
-
-  const handleReviewClick = (atpId: string) => {
-    setSelectedAtpId(atpId);
-    setSelectedView('approval');
-  };
+  }, [availableViews, selectedView]);
 
   const renderContent = () => {
     switch (selectedView) {

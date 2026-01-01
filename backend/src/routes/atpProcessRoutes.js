@@ -133,7 +133,7 @@ router.post('/submit', upload.single('atpDocument'), async (req, res) => {
 router.post('/:atpId/document-control', async (req, res) => {
   try {
     const { atpId } = req.params;
-    const { reviewer_id, decision, comments, detected_category, manual_override } = req.body;
+    const { decision, comments, detected_category, manual_override } = req.body;
 
     const atp = await prisma.atp_documents.findUnique({
       where: { id: atpId }
@@ -356,7 +356,7 @@ router.get('/:atpId', async (req, res) => {
 // Get dashboard statistics
 router.get('/dashboard/stats', async (req, res) => {
   try {
-    const { role, user_id, site_id } = req.query;
+    const { role } = req.query;
 
     // Base statistics
     const [

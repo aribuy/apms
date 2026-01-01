@@ -2,6 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('../utils/logger');
+const { validateBody } = require('../middleware/validator');
+const {
+  templateCreateSchema,
+  templateUpdateSchema,
+  templatePhotoSchema
+} = require('../validations/atpTemplate');
 
 // Get all templates
 router.get('/', async (req, res) => {
@@ -33,7 +40,7 @@ router.get('/', async (req, res) => {
 
     res.json({ success: true, data: templates });
   } catch (error) {
-    console.error('Template fetch error:', error);
+    logger.error({ err: error }, 'Template fetch error');
     res.status(500).json({ success: false, error: 'Failed to fetch templates' });
   }
 });
@@ -61,13 +68,13 @@ router.get('/:id', async (req, res) => {
 
     res.json({ success: true, data: template });
   } catch (error) {
-    console.error('Template detail error:', error);
+    logger.error({ err: error }, 'Template detail error');
     res.status(500).json({ success: false, error: 'Failed to fetch template' });
   }
 });
 
 // Create new template
-router.post('/', async (req, res) => {
+router.post('/', validateBody(templateCreateSchema, { stripUnknown: false }), async (req, res) => {
   try {
     const { template_name, category, version, scope, sections } = req.body;
     
@@ -90,10 +97,10 @@ router.post('/', async (req, res) => {
 
     // Create sections and items
     if (sections && sections.length > 0) {
-      console.log('Creating sections:', sections);
+      logger.debug({ sections }, 'Creating sections');
       for (let i = 0; i < sections.length; i++) {
         const section = sections[i];
-        console.log('Creating section:', section);
+        logger.debug({ section }, 'Creating section');
         const createdSection = await prisma.atp_template_sections.create({
           data: {
             template_id: template.id,
@@ -102,7 +109,7 @@ router.post('/', async (req, res) => {
             description: section.description || ''
           }
         });
-        console.log('Created section:', createdSection);
+        logger.debug({ sectionId: createdSection.id }, 'Created section');
 
         if (section.items && section.items.length > 0) {
           for (let j = 0; j < section.items.length; j++) {
@@ -123,7 +130,7 @@ router.post('/', async (req, res) => {
         }
       }
     } else {
-      console.log('No sections provided');
+      logger.debug('No sections provided');
     }
 
     // Return template with sections and items
@@ -143,16 +150,16 @@ router.post('/', async (req, res) => {
 
     res.json({ success: true, data: fullTemplate });
   } catch (error) {
-    console.error('Template creation error:', error);
+    logger.error({ err: error }, 'Template creation error');
     res.status(500).json({ success: false, error: 'Failed to create template' });
   }
 });
 
 // Update template
-router.put('/:id', async (req, res) => {
+router.put('/:id', validateBody(templateUpdateSchema, { stripUnknown: false }), async (req, res) => {
   try {
-    console.log('Update request for template:', req.params.id);
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    logger.debug({ templateId: req.params.id }, 'Update request for template');
+    logger.debug({ body: req.body }, 'Template update request body');
     
     const { template_name, category, version, scope, sections, is_active } = req.body;
 
@@ -168,7 +175,7 @@ router.put('/:id', async (req, res) => {
         updated_at: new Date()
       }
     });
-    console.log('Template updated:', templateUpdate);
+    logger.debug({ templateId: templateUpdate.id }, 'Template updated');
 
     // Only update sections if sections are explicitly provided
     if (sections !== undefined && Array.isArray(sections)) {
@@ -234,7 +241,7 @@ router.put('/:id', async (req, res) => {
 
     res.json({ success: true, data: updatedTemplate });
   } catch (error) {
-    console.error('Template update error:', error);
+    logger.error({ err: error }, 'Template update error');
     res.status(500).json({ success: false, error: 'Failed to update template' });
   }
 });
@@ -248,7 +255,7 @@ router.delete('/:id', async (req, res) => {
 
     res.json({ success: true, message: 'Template deleted successfully' });
   } catch (error) {
-    console.error('Template deletion error:', error);
+    logger.error({ err: error }, 'Template deletion error');
     res.status(500).json({ success: false, error: 'Failed to delete template' });
   }
 });
@@ -282,13 +289,13 @@ router.post('/:id/clone', async (req, res) => {
 
     res.json({ success: true, data: cloned });
   } catch (error) {
-    console.error('Template clone error:', error);
+    logger.error({ err: error }, 'Template clone error');
     res.status(500).json({ success: false, error: 'Failed to clone template' });
   }
 });
 
 // Update item photo
-router.put('/:templateId/items/:itemId/photo', async (req, res) => {
+router.put('/:templateId/items/:itemId/photo', validateBody(templatePhotoSchema), async (req, res) => {
   try {
     const { reference_photo } = req.body;
     
@@ -299,7 +306,7 @@ router.put('/:templateId/items/:itemId/photo', async (req, res) => {
     
     res.json({ success: true });
   } catch (error) {
-    console.error('Photo update error:', error);
+    logger.error({ err: error }, 'Photo update error');
     res.status(500).json({ success: false, error: 'Failed to update photo' });
   }
 });
@@ -317,7 +324,7 @@ router.get('/:id/analytics', async (req, res) => {
 
     res.json({ success: true, data: analytics });
   } catch (error) {
-    console.error('Analytics error:', error);
+    logger.error({ err: error }, 'Analytics error');
     res.status(500).json({ success: false, error: 'Failed to fetch analytics' });
   }
 });

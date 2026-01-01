@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Wrench, CheckCircle, Clock, AlertTriangle, Upload, Camera, FileText, MapPin } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Wrench, CheckCircle, Clock, AlertTriangle, Camera, FileText, MapPin } from 'lucide-react';
 
 interface PunchlistItem {
   id: string;
@@ -31,11 +31,7 @@ const PunchlistManagement: React.FC<PunchlistManagementProps> = ({ userRole }) =
   const [beforeEvidence, setBeforeEvidence] = useState<File[]>([]);
   const [afterEvidence, setAfterEvidence] = useState<File[]>([]);
 
-  useEffect(() => {
-    fetchPunchlistItems();
-  }, [userRole]);
-
-  const fetchPunchlistItems = async () => {
+  const fetchPunchlistItems = useCallback(async () => {
     try {
       // Mock data for demonstration
       const mockItems: PunchlistItem[] = [
@@ -72,7 +68,11 @@ const PunchlistManagement: React.FC<PunchlistManagementProps> = ({ userRole }) =
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchPunchlistItems();
+  }, [fetchPunchlistItems]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

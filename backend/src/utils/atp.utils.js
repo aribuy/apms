@@ -17,13 +17,13 @@ const categorizeATP = (document, returnConfidence = false) => {
 
   if (softwareMatches > 0 && hardwareMatches > 0) {
     category = 'COMBINED';
-    confidence = Math.min((softwareMatches + hardwareMatches) / 10, 1);
+    confidence = Math.min(0.6 + (softwareMatches + hardwareMatches) * 0.1, 0.95);
   } else if (softwareMatches > hardwareMatches) {
     category = 'SOFTWARE';
-    confidence = Math.min(softwareMatches / 5, 1);
+    confidence = Math.min(0.7 + softwareMatches * 0.1, 0.95);
   } else if (hardwareMatches > 0) {
     category = 'HARDWARE';
-    confidence = Math.min(hardwareMatches / 5, 1);
+    confidence = Math.min(0.7 + hardwareMatches * 0.1, 0.95);
   } else {
     category = 'UNKNOWN';
     confidence = 0;

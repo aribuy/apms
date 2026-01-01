@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, Download, Plus, X } from 'lucide-react';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { apiClient } from '../../utils/apiClient';
 
 interface Site {
   id: string;
@@ -18,6 +20,7 @@ interface Site {
 }
 
 const SiteManagement: React.FC = () => {
+  const { currentWorkspace } = useWorkspace();
   const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -30,6 +33,7 @@ const SiteManagement: React.FC = () => {
   const [showSiteModal, setShowSiteModal] = useState(false);
   const [modalType, setModalType] = useState<'view' | 'edit'>('view');
   const [selectedSite, setSelectedSite] = useState<any>(null);
+  const [parsedSites, setParsedSites] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -58,40 +62,136 @@ const SiteManagement: React.FC = () => {
     }
   };
 
+  const splitCsvLine = (line: string) => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i += 1;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current);
+    return result.map((value) => value.trim());
+  };
+
+  const parseCsv = (text: string) => {
+    const lines = text.split(/\r?\n/).filter((line) => line.trim());
+    if (lines.length < 2) return [];
+    const headers = splitCsvLine(lines[0]).map((header) => header.trim());
+
+    const headerMap: Record<string, string> = {
+      'Customer Site ID': 'siteId',
+      'Customer Site Name': 'siteName',
+      'NE Latitude': 'neLatitude',
+      'NE Longitude': 'neLongitude',
+      'FE Latitude': 'feLatitude',
+      'FE Longitude': 'feLongitude',
+      'Region': 'region',
+      'City': 'city',
+      'Scope': 'scope',
+      'ATP Required': 'atpRequired',
+      'ATP Type': 'atpType',
+      'Status': 'status'
+    };
+
+    const sites = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = splitCsvLine(lines[i]);
+      const row: Record<string, any> = {};
+      headers.forEach((header, idx) => {
+        const key = headerMap[header];
+        if (!key) return;
+        row[key] = values[idx] ?? '';
+      });
+
+      if (!row.siteId || !row.siteName) continue;
+
+      const toNumber = (value: string) => {
+        const parsed = Number(value);
+        return Number.isNaN(parsed) ? null : parsed;
+      };
+
+      const normalizeBoolean = (value: string) => {
+        const normalized = String(value).trim().toLowerCase();
+        if (['true', 'yes', 'y', '1'].includes(normalized)) return true;
+        if (['false', 'no', 'n', '0'].includes(normalized)) return false;
+        return false;
+      };
+
+      sites.push({
+        ...row,
+        neLatitude: toNumber(row.neLatitude),
+        neLongitude: toNumber(row.neLongitude),
+        feLatitude: toNumber(row.feLatitude),
+        feLongitude: toNumber(row.feLongitude),
+        atpRequired: normalizeBoolean(row.atpRequired),
+        atpType: row.atpType ? String(row.atpType).trim().toUpperCase() : undefined
+      });
+    }
+
+    return sites;
+  };
+
   const handleFileUpload = async (file: File) => {
     const allowedTypes = ['text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
     if (!allowedTypes.includes(file.type)) {
       alert('Please upload a CSV or Excel file');
       return;
     }
+    if (file.type !== 'text/csv') {
+      alert('Only CSV parsing is supported right now. Please convert the file to CSV.');
+      return;
+    }
     setUploadedFile(file);
-    
-    // Simulate validation and check duplicates
-    setTimeout(async () => {
-      setValidationComplete(true);
-      // Always check duplicates after validation
-      await checkDuplicates();
-    }, 2000);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const text = String(reader.result || '');
+        const sites = parseCsv(text);
+        setParsedSites(sites);
+        setValidationComplete(true);
+        await checkDuplicates(sites);
+      } catch (error) {
+        console.error('Error parsing CSV:', error);
+        setValidationComplete(false);
+      }
+    };
+    reader.onerror = () => {
+      setValidationComplete(false);
+    };
+    reader.readAsText(file);
   };
 
   const downloadTemplate = () => {
-    const csvContent = `Customer Site ID,Customer Site Name,Customer Site ID (FE),Customer Site Name (FE),NE Latitude,NE Longitude,FE Latitude,FE Longitude,Region,Coverage Area,City,Scope,ATP Required,ATP Type,Activity Flow,SOW Category,Project Code,Frequency,Capacity,Antenna Size,Equipment Type,Status,Scope Description\nSUM-SB-ARS-0834,PANYAKALAN,SUM-SB-ARS-0010,Koto Baru Solok,-0.7654321,100.1234567,-0.654321,100.2345678,Sumatera,Solok District,Solok,MW,true,BOTH,MW Link Upgrade,Upgrade Config 1+0 to 2+0,MWU-2025-A,11GHz,500Mbps,0.3m,NEC IPASOLINK,ACTIVE,Upgrade 1+0 to 2+0 (HW Activity)\nKAL-KB-BEK-0752,JAGOI_BABANG,KAL-KB-BEK-0293,SELUAS_BENGKAYANG,0.8765432,109.9876543,0.7654321,109.8765432,Kalimantan,Bengkayang District,Bengkayang,MW,true,BOTH,MW Link Upgrade,Upgrade Config 1+0 to 2+0,MWU-2025-B,13GHz,500Mbps,0.6m,Huawei RTN,ACTIVE,Upgrade Config 1+0 to 2+0 (HW Activity)\nKAL-KB-BEK-0514,Sanggau Ledo,KAL-KB-BEK-0336,PISAK BENGKAYANG,0.9876543,109.1234567,0.8765432,109.2345678,Kalimantan,Bengkayang District,Bengkayang,MW,true,BOTH,MW Link Upgrade,Upgrade Config 1+0 to 2+0,MWU-2025-C,15GHz,600Mbps,0.3m,Ericsson MINILINK,ACTIVE,Upgrade Config 1+0 to 2+0 (HW Activity)\nSUM-LA-LIW-0465,PEKON LOMBOK,SUM-LA-LIW-0879,A-Sukau,-5.1234567,104.9876543,-5.2345678,104.8765432,Sumatera,Lampung Barat District,Lampung,MW,true,BOTH,MW Link Swap,Swap Upgrade 4+0,MWU-2025-D,18GHz,1Gbps,1.2m,Aviat CTR8000,ACTIVE,Swap Upgrade 4+0 (HW Activity)\nSUM-SU-STB-2449,NAMO SIALANG_LANGKAT,SUM-SU-STB-1948,Sei Serdang LANGKAT Bawah,3.1234567,98.9876543,3.2345678,98.8765432,Sumatera,Langkat District,Langkat,MW,true,BOTH,MW Link Upgrade,Upgrade Config 1+0 to 2+0,MWU-2025-E,7GHz,400Mbps,0.6m,Nokia AirScale,ACTIVE,Upgrade Config 1+0 to 2+0 (HW Activity)\nKAL-KI-TRG-0619,PEDINGIN,KAL-KI-SMR-0338,Road Sanga Sanga,-0.1234567,117.1234567,-0.2345678,117.2345678,Kalimantan,Kutai Kartanegara District,Kutai Kartanegara,MW,true,SOFTWARE,MW Link Upgrade,Upgrade BW 56Mhz,MWU-2025-F,8GHz,700Mbps,0.3m,NEC IPASOLINK,ACTIVE,Upgrade BW 56Mhz (SW Activity)\nKAL-KI-TRG-0769,KARANG TUNGGAL,KAL-KI-TRG-0612,LOA JANAN ILIR,-0.3456789,117.3456789,-0.456789,117.456789,Kalimantan,Kutai Kartanegara District,Kutai Kartanegara,MW,true,SOFTWARE,MW Link Upgrade,Upgrade BW 56Mhz,MWU-2025-G,6GHz,600Mbps,0.6m,Huawei RTN,ACTIVE,Upgrade BW 56Mhz (SW Activity)\nSUL-SN-SKG-1375,SANRESENG ADEBOLA,SUL-SN-WTP-0806,Welado BONE,-4.1234567,120.1234567,-4.2345678,120.2345678,Sulawesi,Bone District,Bone,MW,true,SOFTWARE,MW Link Upgrade,Upgrade Modulation,MWU-2025-H,10GHz,400Mbps,0.3m,Ericsson MINILINK,ACTIVE,Upgrade Modulation (SW Activity)\nSUM-SU-KPI-1160,Perlabian,SUM-SU-KPI-1164,Kota Pinang Road,1.1234567,100.9876543,1.2345678,100.8765432,Sumatera,Labuhanbatu District,Labuhanbatu,MW,true,SOFTWARE,MW Link Upgrade,Upgrade Modulation,MWU-2025-I,13GHz,500Mbps,0.6m,Nokia AirScale,ACTIVE,Upgrade Modulation (SW Activity)\nSUM-SU-KIS-2127,PERKEBUNAN AIR BATUI,SUM-SU-KIS-0166,Aek Teluk Kiri,2.1234567,99.9876543,2.2345678,99.8765432,Sumatera,Asahan District,Asahan,MW,true,SOFTWARE,MW Link Upgrade,Upgrade Modulation,MWU-2025-J,15GHz,600Mbps,0.3m,Aviat CTR8000,ACTIVE,Upgrade Modulation (SW Activity)`;
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = 'site_atp_template.csv';
+    a.href = '/Register_Sites_Template.csv';
+    a.download = 'Register_Sites_Template.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
   };
 
-  const fetchSites = async () => {
+  const fetchSites = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/sites');
-      const data = await response.json();
+      const response = await apiClient.get('/api/sites', {
+        params: {
+          workspaceId: currentWorkspace?.id
+        }
+      });
+      const data = response.data;
       setSites(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching sites:', error);
@@ -99,14 +199,14 @@ const SiteManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentWorkspace?.id]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchSites();
-  }, []);
+  }, [fetchSites]);
 
-  const checkDuplicates = async () => {
-    const sitesData = [
+  const checkDuplicates = async (sitesData?: any[]) => {
+    const fallbackSites = [
       { siteId: 'JKTB001', siteName: 'PANYAKALAN', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.2088, neLongitude: 106.8456, feLatitude: -6.2089, feLongitude: 106.8457, status: 'ACTIVE' },
       { siteId: 'JKTB002', siteName: 'KEMAYORAN', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.1745, neLongitude: 106.8227, feLatitude: -6.1746, feLongitude: 106.8228, status: 'ACTIVE' },
       { siteId: 'SUMRI001', siteName: 'MEDAN PLAZA', siteType: 'MW', region: 'Sumatra', city: 'Medan', neLatitude: 3.5952, neLongitude: 98.6722, feLatitude: 3.5953, feLongitude: 98.6723, status: 'ACTIVE' },
@@ -116,15 +216,16 @@ const SiteManagement: React.FC = () => {
       { siteId: 'SBYB001', siteName: 'SURABAYA CENTER', siteType: 'MW', region: 'East Java', city: 'Surabaya', neLatitude: -7.2575, neLongitude: 112.7521, feLatitude: -7.2576, feLongitude: 112.7522, status: 'ACTIVE' },
       { siteId: 'YGYA001', siteName: 'YOGYA MALIOBORO', siteType: 'MW', region: 'Central Java', city: 'Yogyakarta', neLatitude: -7.7956, neLongitude: 110.3695, feLatitude: -7.7957, feLongitude: 110.3696, status: 'ACTIVE' }
     ];
+    const payloadSites = sitesData && sitesData.length > 0 ? sitesData : fallbackSites;
 
     try {
-      const response = await fetch('/api/sites/check-duplicates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sites: sitesData })
+      const response = await apiClient.post('/api/sites/check-duplicates', { sites: payloadSites }, {
+        params: {
+          workspaceId: currentWorkspace?.id
+        }
       });
       
-      const data = await response.json();
+      const data = response.data;
       if (data.duplicates > 0) {
         setDuplicateDetected(true);
         setDuplicateData(data);
@@ -135,7 +236,7 @@ const SiteManagement: React.FC = () => {
   };
 
   const processSites = async () => {
-    const sitesData = [
+    const fallbackSites = [
       { siteId: 'JKTB001', siteName: 'PANYAKALAN', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.2088, neLongitude: 106.8456, feLatitude: -6.2089, feLongitude: 106.8457, status: 'ACTIVE' },
       { siteId: 'JKTB002', siteName: 'KEMAYORAN', siteType: 'MW', region: 'Jakarta', city: 'Jakarta', neLatitude: -6.1745, neLongitude: 106.8227, feLatitude: -6.1746, feLongitude: 106.8228, status: 'ACTIVE' },
       { siteId: 'SUMRI001', siteName: 'MEDAN PLAZA', siteType: 'MW', region: 'Sumatra', city: 'Medan', neLatitude: 3.5952, neLongitude: 98.6722, feLatitude: 3.5953, feLongitude: 98.6723, status: 'ACTIVE' },
@@ -145,17 +246,20 @@ const SiteManagement: React.FC = () => {
       { siteId: 'SBYB001', siteName: 'SURABAYA CENTER', siteType: 'MW', region: 'East Java', city: 'Surabaya', neLatitude: -7.2575, neLongitude: 112.7521, feLatitude: -7.2576, feLongitude: 112.7522, status: 'ACTIVE' },
       { siteId: 'YGYA001', siteName: 'YOGYA MALIOBORO', siteType: 'MW', region: 'Central Java', city: 'Yogyakarta', neLatitude: -7.7956, neLongitude: 110.3695, feLatitude: -7.7957, feLongitude: 110.3696, status: 'ACTIVE' }
     ];
+    const sitesData = parsedSites.length > 0 ? parsedSites : fallbackSites;
 
     try {
-      const response = await fetch('/api/sites/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sites: sitesData })
+      const response = await apiClient.post('/api/sites/bulk', {
+        sites: sitesData,
+        workspaceId: currentWorkspace?.id
       });
       
-      if (response.ok) {
-        const result = await response.json();
-        alert(`Processing 8 valid sites... ${result.created || 0} sites registered successfully! (${8 - (result.created || 0)} duplicates skipped)`);
+      if (response.status === 200) {
+        const result = response.data;
+        const created = result.created || 0;
+        const updated = result.updated || 0;
+        const tasksCreated = result.tasksCreated || 0;
+        alert(`Processed ${sitesData.length} sites. Created: ${created}, Updated: ${updated}, ATP Tasks: ${tasksCreated}.`);
         await fetchSites();
       } else {
         alert('Error registering sites');
@@ -181,14 +285,13 @@ const SiteManagement: React.FC = () => {
     ];
 
     try {
-      const response = await fetch('/api/sites/update-bulk', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sites: sitesData })
+      const response = await apiClient.put('/api/sites/update-bulk', {
+        sites: sitesData,
+        workspaceId: currentWorkspace?.id
       });
       
-      if (response.ok) {
-        const result = await response.json();
+      if (response.status === 200) {
+        const result = response.data;
         alert(`${result.updated || 0} sites updated successfully!`);
         await fetchSites();
       } else {
@@ -317,11 +420,12 @@ const SiteManagement: React.FC = () => {
                 <tr>
                   <td colSpan={7} className="px-6 py-8 text-center text-gray-500">Loading...</td>
                 </tr>
-              ) : sites.map((site) => (
-                <tr key={site.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{site.siteId}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{site.siteName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{site.scope || site.site_type}</td>
+              ) : sites.map((site) => {
+                return (
+                <tr key={site.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium bg-white" style={{color: '#111827'}}>{site.siteId || 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm bg-white" style={{color: '#111827'}}>{site.siteName || 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm bg-white" style={{color: '#374151'}}>{site.scope || site.site_type || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs rounded-full ${
                       site.atpRequired ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
@@ -360,7 +464,8 @@ const SiteManagement: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
           {!loading && sites.length === 0 && (
@@ -530,7 +635,7 @@ const SiteManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Site ID</label>
                 <input
                   type="text"
-                  value={selectedSite.site_id}
+                  value={selectedSite.siteId}
                   disabled
                   className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
                 />
@@ -539,9 +644,9 @@ const SiteManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Site Name</label>
                 <input
                   type="text"
-                  value={selectedSite.site_name}
+                  value={selectedSite.siteName}
                   disabled={modalType === 'view'}
-                  onChange={(e) => setSelectedSite({...selectedSite, site_name: e.target.value})}
+                  onChange={(e) => setSelectedSite({...selectedSite, siteName: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 />
               </div>

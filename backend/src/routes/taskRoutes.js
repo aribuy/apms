@@ -1,27 +1,45 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
+const { authenticateToken } = require('../middleware/auth');
+const { logAuditEvent } = require('../middleware/auditLogger');
+const { validateBody } = require('../middleware/validator');
+const { taskCreateSchema, taskUpdateSchema } = require('../validations/task');
+
+router.use(authenticateToken);
 
 // Use the same Prisma instance from server.js
 let prisma;
 try {
   const { PrismaClient } = require('@prisma/client');
   prisma = new PrismaClient();
-  console.log('Prisma client initialized in taskRoutes');
+  logger.debug('Prisma client initialized in taskRoutes');
 } catch (error) {
-  console.error('Error initializing Prisma:', error);
+  logger.error({ err: error }, 'Error initializing Prisma');
 }
 
 // Get all tasks with optional filtering
 router.get('/', async (req, res) => {
   try {
-    const { site_id, assigned_to, status, task_type, workflow_type } = req.query;
+    const {
+      site_id,
+      assigned_to,
+      assigned_role,
+      status,
+      task_type,
+      workflow_type,
+      workspace_id,
+      workspaceId
+    } = req.query;
 
     const whereClause = {};
     if (site_id) whereClause.siteId = site_id;
     if (assigned_to) whereClause.assignedTo = assigned_to;
+    if (assigned_role) whereClause.assignedRole = assigned_role;
     if (status) whereClause.status = status;
     if (task_type) whereClause.taskType = task_type;
     if (workflow_type) whereClause.workflowType = workflow_type;
+    if (workspaceId || workspace_id) whereClause.workspaceId = workspaceId || workspace_id;
 
     const tasks = await prisma.task.findMany({
       where: whereClause,
@@ -38,14 +56,14 @@ router.get('/', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    console.log(`Found ${tasks.length} tasks`);
+    logger.debug({ count: tasks.length }, 'Tasks fetched');
     res.json({
       success: true,
       data: tasks,
       count: tasks.length
     });
   } catch (error) {
-    console.error('Error fetching tasks:', error);
+    logger.error({ err: error }, 'Error fetching tasks');
     res.status(500).json({
       success: false,
       error: 'Failed to fetch tasks',
@@ -58,9 +76,12 @@ router.get('/', async (req, res) => {
 router.get('/site/:siteId', async (req, res) => {
   try {
     const { siteId } = req.params;
+    const { workspace_id, workspaceId } = req.query;
+    const whereClause = { siteId };
+    if (workspaceId || workspace_id) whereClause.workspaceId = workspaceId || workspace_id;
 
     const tasks = await prisma.task.findMany({
-      where: { siteId: siteId },
+      where: whereClause,
       include: {
         sites: {
           select: {
@@ -81,7 +102,7 @@ router.get('/site/:siteId', async (req, res) => {
       site_id: siteId
     });
   } catch (error) {
-    console.error('Error fetching site tasks:', error);
+    logger.error({ err: error }, 'Error fetching site tasks');
     res.status(500).json({
       success: false,
       error: 'Failed to fetch site tasks',
@@ -91,7 +112,7 @@ router.get('/site/:siteId', async (req, res) => {
 });
 
 // Create new task
-router.post('/', async (req, res) => {
+router.post('/', validateBody(taskCreateSchema), async (req, res) => {
   try {
     const {
       site_id,
@@ -140,8 +161,9 @@ router.post('/', async (req, res) => {
         priority: priority || 'normal',
         slaDeadline: sla_deadline ? new Date(sla_deadline) : null,
         parentTaskId: parent_task_id,
-        dependsOn,
-        taskData: task_data || {}
+        dependsOn: depends_on,
+        taskData: task_data || {},
+        workspaceId: req.body.workspaceId || req.body.workspace_id || site.workspaceId || null
       },
       include: {
         sites: {
@@ -155,14 +177,24 @@ router.post('/', async (req, res) => {
       }
     });
 
-    console.log('Task created:', newTask.taskCode);
+    await logAuditEvent({
+      userId: req.user?.id,
+      action: 'CREATE',
+      resource: 'task',
+      resourceId: newTask?.id,
+      newData: newTask,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+
+    logger.info({ taskCode: newTask.taskCode }, 'Task created');
     res.status(201).json({
       success: true,
       data: newTask,
       message: `Task ${newTask.taskCode} created successfully`
     });
   } catch (error) {
-    console.error('Error creating task:', error);
+    logger.error({ err: error }, 'Error creating task');
     res.status(500).json({
       success: false,
       error: 'Failed to create task',
@@ -172,7 +204,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update task
-router.put('/:id', async (req, res) => {
+router.put('/:id', validateBody(taskUpdateSchema), async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
@@ -187,6 +219,10 @@ router.put('/:id', async (req, res) => {
     if (updateData.completed_at) {
       updateData.completedAt = new Date(updateData.completed_at);
     }
+
+    const existingTask = await prisma.task.findUnique({
+      where: { id }
+    });
 
     const updatedTask = await prisma.task.update({
       where: { id },
@@ -203,13 +239,24 @@ router.put('/:id', async (req, res) => {
       }
     });
 
+    await logAuditEvent({
+      userId: req.user?.id,
+      action: 'UPDATE',
+      resource: 'task',
+      resourceId: updatedTask?.id,
+      oldData: existingTask,
+      newData: updatedTask,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+
     res.json({
       success: true,
       data: updatedTask,
       message: `Task ${updatedTask.taskCode} updated successfully`
     });
   } catch (error) {
-    console.error('Error updating task:', error);
+    logger.error({ err: error }, 'Error updating task');
     res.status(500).json({
       success: false,
       error: 'Failed to update task',
@@ -223,8 +270,22 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
+    const existingTask = await prisma.task.findUnique({
+      where: { id }
+    });
+
     const deletedTask = await prisma.task.delete({
       where: { id }
+    });
+
+    await logAuditEvent({
+      userId: req.user?.id,
+      action: 'DELETE',
+      resource: 'task',
+      resourceId: deletedTask?.id,
+      oldData: existingTask,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
     });
 
     res.json({
@@ -232,7 +293,7 @@ router.delete('/:id', async (req, res) => {
       message: `Task ${deletedTask.taskCode} deleted successfully`
     });
   } catch (error) {
-    console.error('Error deleting task:', error);
+    logger.error({ err: error }, 'Error deleting task');
     res.status(500).json({
       success: false,
       error: 'Failed to delete task',
@@ -244,11 +305,12 @@ router.delete('/:id', async (req, res) => {
 // Get task statistics
 router.get('/stats', async (req, res) => {
   try {
-    const { assigned_to, site_id } = req.query;
+    const { assigned_to, site_id, workspace_id, workspaceId } = req.query;
 
     const whereClause = {};
     if (assigned_to) whereClause.assignedTo = assigned_to;
     if (site_id) whereClause.siteId = site_id;
+    if (workspaceId || workspace_id) whereClause.workspaceId = workspaceId || workspace_id;
 
     const [
       totalTasks,
@@ -281,7 +343,7 @@ router.get('/stats', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching task stats:', error);
+    logger.error({ err: error }, 'Error fetching task stats');
     res.status(500).json({
       success: false,
       error: 'Failed to fetch task statistics',

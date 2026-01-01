@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, Edit, CheckCircle, Circle, Camera, FileText, Monitor } from 'lucide-react';
 
 interface TemplatePreviewProps {
@@ -38,13 +38,8 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({ templateId, onBack, o
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (templateId) {
-      fetchTemplate();
-    }
-  }, [templateId]);
-
-  const fetchTemplate = async () => {
+  const fetchTemplate = useCallback(async () => {
+    if (!templateId) return;
     try {
       const response = await fetch(`http://localhost:3011/api/v1/atp-templates/${templateId}`);
       const data = await response.json();
@@ -60,7 +55,11 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({ templateId, onBack, o
     } finally {
       setLoading(false);
     }
-  };
+  }, [templateId]);
+
+  useEffect(() => {
+    fetchTemplate();
+  }, [fetchTemplate]);
 
   const toggleSection = (sectionId: string) => {
     const newExpanded = new Set(expandedSections);

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Plus, Upload, Eye, BarChart3, MapPin, CheckCircle, Download, FileText, Edit, Trash2 } from 'lucide-react';
+import { Plus, Upload, Eye, BarChart3, Download, FileText, Edit, Trash2 } from 'lucide-react';
 
 interface SiteRegistrationProps {
   onSitesRegistered?: (sites?: any[]) => void;

@@ -1,0 +1,231 @@
+<mxfile host="app.diagrams.net" modified="2026-01-01T00:00:00.000Z" agent="GPT" version="24.7.8">
+  <diagram id="ATP_TO_BE" name="ATP TO-BE BPMN (Swimlanes)">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1080" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Pool -->
+        <mxCell id="pool" value="ATP Approval (TO-BE) - APMS" style="swimlane;horizontal=0;startSize=30;rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="1840" height="920" as="geometry"/>
+        </mxCell>
+
+        <!-- Lanes -->
+        <mxCell id="lane_vendor" value="Vendor (Aviat)" style="swimlane;horizontal=1;startSize=28;rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="pool">
+          <mxGeometry x="0" y="30" width="1840" height="150" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="lane_system" value="ATP System (APMS)" style="swimlane;horizontal=1;startSize=28;rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="pool">
+          <mxGeometry x="0" y="180" width="1840" height="190" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="lane_doc" value="Document Control (XLSMART)" style="swimlane;horizontal=1;startSize=28;rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="pool">
+          <mxGeometry x="0" y="370" width="1840" height="150" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="lane_rev" value="Reviewers (Stage 1..N)" style="swimlane;horizontal=1;startSize=28;rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="pool">
+          <mxGeometry x="0" y="520" width="1840" height="220" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="lane_int" value="Integration (SAP/Billing)" style="swimlane;horizontal=1;startSize=28;rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="pool">
+          <mxGeometry x="0" y="740" width="1840" height="180" as="geometry"/>
+        </mxCell>
+
+        <!-- Nodes -->
+        <mxCell id="start" value="Start&#xa;Site Ready for ATP" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="lane_vendor">
+          <mxGeometry x="70" y="60" width="120" height="60" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="submit" value="Submit ATP Document" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="lane_vendor">
+          <mxGeometry x="240" y="55" width="180" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="validate" value="Validate Submission" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="lane_system">
+          <mxGeometry x="470" y="70" width="180" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="gw_valid" value="Valid?" style="rhombus;whiteSpace=wrap;html=1;" vertex="1" parent="lane_system">
+          <mxGeometry x="690" y="80" width="70" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="reject_end" value="End&#xa;Rejected" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="lane_system">
+          <mxGeometry x="790" y="30" width="120" height="60" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="create" value="Create ATP Record&#xa;(SUBMITTED)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="lane_system">
+          <mxGeometry x="820" y="120" width="200" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="assign_doc" value="Assign Doc Control" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="lane_system">
+          <mxGeometry x="1050" y="120" width="180" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="doc_review" value="Review Completeness" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="lane_doc">
+          <mxGeometry x="1280" y="55" width="200" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="gw_doc" value="Complete?" style="rhombus;whiteSpace=wrap;html=1;" vertex="1" parent="lane_doc">
+          <mxGeometry x="1510" y="60" width="70" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="freeze" value="Freeze Config&#xa;(config_version_id)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="lane_system">
+          <mxGeometry x="1600" y="120" width="210" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="path" value="HW / SW Path" style="rhombus;whiteSpace=wrap;html=1;" vertex="1" parent="lane_system">
+          <mxGeometry x="1850" y="120" width="70" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="wf" value="Create Workflow&#xa;+ Stages" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="lane_system">
+          <mxGeometry x="60" y="40" width="200" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="review" value="Stage Review&#xa;(Approve / Punchlist / Reject)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="lane_rev">
+          <mxGeometry x="300" y="70" width="260" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="record" value="Record Decision&#xa;+ Audit Log" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="lane_rev">
+          <mxGeometry x="600" y="70" width="220" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="gw_dec" value="Decision?" style="rhombus;whiteSpace=wrap;html=1;" vertex="1" parent="lane_rev">
+          <mxGeometry x="850" y="80" width="70" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="gw_more" value="More stages?" style="rhombus;whiteSpace=wrap;html=1;" vertex="1" parent="lane_rev">
+          <mxGeometry x="970" y="80" width="90" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="punch" value="Evaluate Punchlist&#xa;(CRITICAL blocks)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="lane_rev">
+          <mxGeometry x="1100" y="70" width="230" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="gw_block" value="Blocked?" style="rhombus;whiteSpace=wrap;html=1;" vertex="1" parent="lane_rev">
+          <mxGeometry x="1360" y="80" width="70" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="approve" value="Mark Approved&#xa;(100%)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="lane_rev">
+          <mxGeometry x="1460" y="70" width="170" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="lock" value="Lock ATP" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="lane_rev">
+          <mxGeometry x="1650" y="70" width="120" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="cert" value="Generate Certificate&#xa;+ Hash" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="lane_int">
+          <mxGeometry x="250" y="60" width="220" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="integrate" value="Trigger Integration&#xa;(SAP/Billing)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="lane_int">
+          <mxGeometry x="510" y="60" width="220" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="end" value="End&#xa;ATP Completed" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="lane_int">
+          <mxGeometry x="770" y="70" width="140" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="e1" style="endArrow=block;html=1;" edge="1" parent="lane_vendor" source="start" target="submit">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e2" style="endArrow=block;html=1;" edge="1" parent="pool" source="submit" target="validate">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e3" style="endArrow=block;html=1;" edge="1" parent="pool" source="validate" target="gw_valid">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e4_yes" value="YES" style="endArrow=block;html=1;" edge="1" parent="pool" source="gw_valid" target="create">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e4_no" value="NO" style="endArrow=block;html=1;" edge="1" parent="pool" source="gw_valid" target="reject_end">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e5" style="endArrow=block;html=1;" edge="1" parent="pool" source="create" target="assign_doc">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e6" style="endArrow=block;html=1;" edge="1" parent="pool" source="assign_doc" target="doc_review">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e7" style="endArrow=block;html=1;" edge="1" parent="pool" source="doc_review" target="gw_doc">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e8_yes" value="YES" style="endArrow=block;html=1;" edge="1" parent="pool" source="gw_doc" target="freeze">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e8_no" value="NO" style="endArrow=block;html=1;" edge="1" parent="pool" source="gw_doc" target="reject_end">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e9" style="endArrow=block;html=1;" edge="1" parent="pool" source="freeze" target="wf">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e10" style="endArrow=block;html=1;" edge="1" parent="pool" source="wf" target="review">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e11" style="endArrow=block;html=1;" edge="1" parent="pool" source="review" target="record">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e12" style="endArrow=block;html=1;" edge="1" parent="pool" source="record" target="gw_dec">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e13_rej" value="REJECT" style="endArrow=block;html=1;" edge="1" parent="pool" source="gw_dec" target="reject_end">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e13_ok" value="APPROVE" style="endArrow=block;html=1;" edge="1" parent="pool" source="gw_dec" target="gw_more">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e14_more" value="YES" style="endArrow=block;html=1;" edge="1" parent="pool" source="gw_more" target="review">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e14_nom" value="NO" style="endArrow=block;html=1;" edge="1" parent="pool" source="gw_more" target="punch">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e15" style="endArrow=block;html=1;" edge="1" parent="pool" source="punch" target="gw_block">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e16_block" value="YES" style="endArrow=block;html=1;" edge="1" parent="pool" source="gw_block" target="review">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e16_ok" value="NO" style="endArrow=block;html=1;" edge="1" parent="pool" source="gw_block" target="approve">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e17" style="endArrow=block;html=1;" edge="1" parent="pool" source="approve" target="lock">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e18" style="endArrow=block;html=1;" edge="1" parent="pool" source="lock" target="cert">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e19" style="endArrow=block;html=1;" edge="1" parent="pool" source="cert" target="integrate">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e20" style="endArrow=block;html=1;" edge="1" parent="pool" source="integrate" target="end">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

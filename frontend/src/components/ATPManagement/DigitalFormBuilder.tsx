@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Upload, File, X, Save, Eye, Download } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Upload, File, X, Save, Download } from 'lucide-react';
 
 interface FormField {
   name: string;
@@ -50,12 +50,7 @@ const DigitalFormBuilder: React.FC<DigitalFormBuilderProps> = ({
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadTemplates();
-    loadExistingData();
-  }, [category, atpId]);
-
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     try {
       const response = await fetch(`/api/v1/documents/templates?category=${category}`);
       const data = await response.json();
@@ -67,9 +62,9 @@ const DigitalFormBuilder: React.FC<DigitalFormBuilderProps> = ({
     } catch (error) {
       console.error('Failed to load templates:', error);
     }
-  };
+  }, [category, selectedTemplate]);
 
-  const loadExistingData = async () => {
+  const loadExistingData = useCallback(async () => {
     try {
       const [formResponse, attachmentsResponse] = await Promise.all([
         fetch(`/api/v1/documents/${atpId}/form-data`),
@@ -92,7 +87,12 @@ const DigitalFormBuilder: React.FC<DigitalFormBuilderProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [atpId]);
+
+  useEffect(() => {
+    loadTemplates();
+    loadExistingData();
+  }, [loadTemplates, loadExistingData]);
 
   const handleFieldChange = (sectionId: string, fieldName: string, value: any) => {
     setFormData((prev: any) => ({

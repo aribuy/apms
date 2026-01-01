@@ -1,0 +1,658 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model atp_checklist_items {
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  atp_id            String?            @db.Uuid
+  review_stage_id   String?            @db.Uuid
+  item_number       String?            @db.VarChar(20)
+  section_name      String?            @db.VarChar(200)
+  description       String?
+  result            String?            @db.VarChar(20)
+  severity          String?            @db.VarChar(20)
+  has_issue         Boolean?           @default(false)
+  issue_description String?
+  evidence_attached Boolean?           @default(false)
+  reviewer_notes    String?
+  created_at        DateTime?          @default(now()) @db.Timestamp(6)
+  atp_documents     atp_documents?     @relation(fields: [atp_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  atp_review_stages atp_review_stages? @relation(fields: [review_stage_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([atp_id], map: "idx_checklist_atp")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model atp_documents {
+  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  atp_code              String                @unique @db.VarChar(50)
+  site_id               String                @db.VarChar(100)
+  project_code          String?               @db.VarChar(100)
+  document_type         String?               @db.VarChar(50)
+  detected_category     String?               @db.VarChar(50)
+  category_confidence   Int?
+  manual_override       Boolean?              @default(false)
+  override_reason       String?
+  final_category        String?               @db.VarChar(50)
+  workflow_path         String?               @db.VarChar(50)
+  current_stage         String?               @db.VarChar(100)
+  current_status        String?               @default("pending_review") @db.VarChar(50)
+  file_path             String?               @db.VarChar(500)
+  file_name             String?               @db.VarChar(255)
+  file_size             Int?
+  mime_type             String?               @db.VarChar(100)
+  vendor_id             String?               @default("aviat") @db.VarChar(100)
+  submitted_by          String?               @db.VarChar(100)
+  submission_date       DateTime?             @default(now()) @db.Timestamp(6)
+  submission_notes      String?
+  completion_percentage Int?                  @default(0)
+  approval_date         DateTime?             @db.Timestamp(6)
+  final_approver        String?               @db.VarChar(100)
+  created_at            DateTime?             @default(now()) @db.Timestamp(6)
+  updated_at            DateTime?             @default(now()) @db.Timestamp(6)
+  document_version         String?                    @db.VarChar(20) @default("1.0")
+  is_digital               Boolean?                   @default(true)
+  template_id              String?                    @db.VarChar(100)
+  form_data                Json?
+  attachments              Json?                      @default("[]")
+  digital_signatures       Json?                      @default("[]")
+  revision_history         Json?                      @default("[]")
+  atp_checklist_items      atp_checklist_items[]
+  atp_punchlist_items      atp_punchlist_items[]
+  atp_review_stages        atp_review_stages[]
+  atp_document_attachments atp_document_attachments[]
+
+  @@index([site_id], map: "idx_atp_site_id")
+  @@index([current_status], map: "idx_atp_status")
+  @@index([workflow_path], map: "idx_atp_workflow")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model atp_punchlist_items {
+  id                     String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  atp_id                 String?            @db.Uuid
+  review_stage_id        String?            @db.Uuid
+  punchlist_number       String?            @unique @db.VarChar(20)
+  test_item_reference    String?            @db.VarChar(100)
+  issue_category         String?            @db.VarChar(100)
+  issue_description      String?
+  severity               String?            @db.VarChar(20)
+  status                 String?            @default("identified") @db.VarChar(50)
+  assigned_team          String?            @db.VarChar(200)
+  target_completion_date DateTime?          @db.Date
+  evidence_before        Json?
+  evidence_after         Json?
+  rectification_notes    String?
+  verification_notes     String?
+  identified_by          String?            @db.VarChar(100)
+  identified_at          DateTime?          @default(now()) @db.Timestamp(6)
+  completed_by           String?            @db.VarChar(100)
+  completed_at           DateTime?          @db.Timestamp(6)
+  verified_by            String?            @db.VarChar(100)
+  verified_at            DateTime?          @db.Timestamp(6)
+  created_at             DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?          @default(now()) @db.Timestamp(6)
+  atp_documents          atp_documents?     @relation(fields: [atp_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  atp_review_stages      atp_review_stages? @relation(fields: [review_stage_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([atp_id], map: "idx_punchlist_atp")
+  @@index([status], map: "idx_punchlist_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model atp_review_stages {
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  atp_id              String?               @db.Uuid
+  stage_number        Int
+  stage_code          String?               @db.VarChar(50)
+  stage_name          String?               @db.VarChar(100)
+  assigned_role       String?               @db.VarChar(50)
+  reviewer_id         String?               @db.VarChar(100)
+  review_status       String?               @default("pending") @db.VarChar(50)
+  decision            String?               @db.VarChar(50)
+  review_started_at   DateTime?             @db.Timestamp(6)
+  review_completed_at DateTime?             @db.Timestamp(6)
+  sla_deadline        DateTime?             @db.Timestamp(6)
+  comments            String?
+  created_at          DateTime?             @default(now()) @db.Timestamp(6)
+  atp_checklist_items atp_checklist_items[]
+  atp_punchlist_items atp_punchlist_items[]
+  atp_documents       atp_documents?        @relation(fields: [atp_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([atp_id], map: "idx_review_stages_atp")
+}
+
+model audit_logs {
+  id          String   @id
+  user_id     String
+  action      String
+  resource    String
+  resource_id String?
+  old_data    Json?
+  new_data    Json?
+  ip_address  String?
+  user_agent  String?
+  created_at  DateTime @default(now())
+  users       users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model document_assignments {
+  id          String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  documentId  String
+  userId      String
+  role        String
+  assignedAt  DateTime? @default(now())
+  dueDate     DateTime?
+  completedAt DateTime?
+  status      String?   @default("pending")
+  documents   documents @relation(fields: [documentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users       users     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([documentId, userId, role])
+}
+
+model documents {
+  id                   String                 @id @default(dbgenerated("(gen_random_uuid())::text"))
+  documentNumber       String                 @unique
+  projectId            String
+  title                String
+  type                 String
+  category             String?
+  taskCode             String?
+  version              Int?                   @default(1)
+  majorVersion         Int?                   @default(1)
+  minorVersion         Int?                   @default(0)
+  isDraft              Boolean?               @default(true)
+  formData             Json?
+  status               String?                @default("draft")
+  submittedAt          DateTime?
+  completedAt          DateTime?
+  dependencies         String[]
+  isBlocked            Boolean?               @default(false)
+  blockReason          String?
+  createdById          String
+  createdAt            DateTime?              @default(now())
+  updatedAt            DateTime?              @default(now())
+  document_assignments document_assignments[]
+  users                users                  @relation(fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  projects             projects               @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model geographic_hierarchy {
+  id                         String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  level                      Int
+  code                       String?                @unique @db.VarChar(50)
+  name                       String                 @db.VarChar(200)
+  parent_id                  String?                @db.Uuid
+  is_active                  Boolean?               @default(true)
+  created_at                 DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at                 DateTime?              @default(now()) @db.Timestamp(6)
+  geographic_hierarchy       geographic_hierarchy?  @relation("geographic_hierarchyTogeographic_hierarchy", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_geographic_hierarchy geographic_hierarchy[] @relation("geographic_hierarchyTogeographic_hierarchy")
+
+  @@index([level], map: "idx_geo_level")
+  @@index([parent_id], map: "idx_geo_parent")
+}
+
+model geographic_privileges {
+  id                          String                  @id
+  name                        String                  @unique
+  level                       AccessLevel
+  parentId                    String?
+  code                        String                  @unique
+  isActive                    Boolean                 @default(true)
+  geographic_privileges       geographic_privileges?  @relation("geographic_privilegesTogeographic_privileges", fields: [parentId], references: [id])
+  other_geographic_privileges geographic_privileges[] @relation("geographic_privilegesTogeographic_privileges")
+  user_privileges             user_privileges[]
+}
+
+model notifications {
+  id         String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  userId     String
+  type       String
+  title      String
+  message    String
+  entityType String?
+  entityId   String?
+  channels   String[]
+  priority   String?   @default("normal")
+  isRead     Boolean?  @default(false)
+  readAt     DateTime?
+  sentAt     DateTime?
+  createdAt  DateTime? @default(now())
+  expiresAt  DateTime?
+  users      users     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model organizations {
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String          @db.VarChar(200)
+  code                String?         @unique @db.VarChar(50)
+  type                String          @db.VarChar(20)
+  status              String?         @default("active") @db.VarChar(20)
+  parent_org_id       String?         @db.Uuid
+  contact_email       String?         @db.VarChar(255)
+  contact_phone       String?         @db.VarChar(50)
+  address             String?
+  created_at          DateTime?       @default(now()) @db.Timestamp(6)
+  updated_at          DateTime?       @default(now()) @db.Timestamp(6)
+  organizations       organizations?  @relation("organizationsToorganizations", fields: [parent_org_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_organizations organizations[] @relation("organizationsToorganizations")
+  projects            projects[]
+  workgroups          workgroups[]
+
+  @@index([type], map: "idx_org_type")
+}
+
+model processes {
+  id             String           @id
+  name           String           @unique
+  description    String?
+  code           String           @unique
+  category       String?
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime
+  role_processes role_processes[]
+  user_processes user_processes[]
+}
+
+model project_assignments {
+  id         String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  projectId  String
+  userId     String
+  role       String
+  assignedAt DateTime? @default(now())
+  assignedBy String?
+  status     String?   @default("active")
+  projects   projects  @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users      users     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([projectId, userId, role])
+}
+
+model projects {
+  id                  String                @id @default(dbgenerated("(gen_random_uuid())::text"))
+  projectNumber       String                @unique
+  name                String
+  description         String?
+  executionType       String
+  organizationId      String                @db.Uuid
+  workgroupId         String?               @db.Uuid
+  customerRef         String?
+  poNumber            String?
+  budget              Decimal?              @db.Decimal(15, 2)
+  startDate           DateTime?
+  endDate             DateTime?
+  status              String?               @default("draft")
+  createdById         String
+  createdAt           DateTime?             @default(now())
+  updatedAt           DateTime?             @default(now())
+  documents           documents[]
+  project_assignments project_assignments[]
+  users               users                 @relation(fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  organizations       organizations         @relation(fields: [organizationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  workgroups          workgroups?           @relation(fields: [workgroupId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model refresh_tokens {
+  id         String   @id
+  token      String   @unique
+  user_id    String
+  expires_at DateTime
+  created_at DateTime @default(now())
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model role_processes {
+  roleId    String
+  processId String
+  canView   Boolean   @default(true)
+  canCreate Boolean   @default(false)
+  canUpdate Boolean   @default(false)
+  canDelete Boolean   @default(false)
+  processes processes @relation(fields: [processId], references: [id], onDelete: Cascade)
+  roles     roles     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, processId])
+}
+
+model roles {
+  id             String           @id
+  name           String           @unique
+  description    String?
+  group          UserType
+  level          AccessLevel
+  isSingle       Boolean          @default(false)
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime
+  role_processes role_processes[]
+  user_roles     user_roles[]
+}
+
+model task_types {
+  id              String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  code            String    @unique @db.VarChar(50)
+  name            String    @db.VarChar(100)
+  description     String?
+  workflow_config Json?
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model tasks {
+  id                             String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  task_code                      String    @unique @db.VarChar(50)
+  task_type                      String    @db.VarChar(50)
+  title                          String    @db.VarChar(255)
+  description                    String?
+  assigned_to                    String?
+  assigned_by                    String?
+  assigned_role                  String?   @db.VarChar(50)
+  status                         String?   @default("pending") @db.VarChar(20)
+  priority                       String?   @default("normal") @db.VarChar(20)
+  created_at                     DateTime? @default(now()) @db.Timestamp(6)
+  started_at                     DateTime? @db.Timestamp(6)
+  completed_at                   DateTime? @db.Timestamp(6)
+  due_date                       DateTime? @db.Timestamp(6)
+  site_id                        String?
+  document_id                    String?
+  parent_task_id                 String?
+  task_data                      Json?
+  result_data                    Json?
+  workflow_type                  String?   @db.VarChar(20)
+  stage_number                   Int?      @default(1)
+  decision                       String?   @db.VarChar(50)
+  decision_comments              String?
+  depends_on                     String[]
+  sla_deadline                   DateTime? @db.Timestamp(6)
+  workspaceId                    String?  @db.VarChar(36)
+  workspace                      workspaces? @relation(fields: [workspaceId], references: [id])
+  updated_at                     DateTime? @default(now()) @db.Timestamp(6)
+  users_tasks_assigned_byTousers users?    @relation("tasks_assigned_byTousers", fields: [assigned_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_tasks_assigned_toTousers users?    @relation("tasks_assigned_toTousers", fields: [assigned_to], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tasks                          tasks?    @relation("tasksTotasks", fields: [parent_task_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_tasks                    tasks[]   @relation("tasksTotasks")
+  sites                          sites?    @relation(fields: [site_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([assigned_to, status], map: "idx_tasks_assigned_status")
+  @@index([created_at(sort: Desc)], map: "idx_tasks_created")
+  @@index([assigned_role, status], map: "idx_tasks_role_status")
+  @@index([site_id], map: "idx_tasks_site_id")
+  @@index([task_type], map: "idx_tasks_task_type")
+  @@index([workflow_type], map: "idx_tasks_workflow_type")
+}
+
+model templates {
+  id        String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  code      String    @unique
+  name      String
+  category  String
+  version   String?   @default("1.0")
+  isActive  Boolean?  @default(true)
+  config    Json?
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @default(now())
+}
+
+model user_groups {
+  id            String      @id
+  name          String      @unique
+  type          GroupType
+  code          String?     @unique
+  address       String?
+  logo          String?
+  contactPerson String?
+  phone         String?
+  email         String?
+  manager       String?
+  budget        Decimal?
+  location      String?
+  status        GroupStatus @default(ACTIVE)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime
+  createdBy     String?
+  updatedBy     String?
+  users         users[]
+}
+
+model user_privileges {
+  userId                String
+  privilegeId           String
+  assignedAt            DateTime              @default(now())
+  geographic_privileges geographic_privileges @relation(fields: [privilegeId], references: [id], onDelete: Cascade)
+  users                 users                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, privilegeId])
+}
+
+model user_processes {
+  userId     String
+  processId  String
+  canView    Boolean   @default(true)
+  canCreate  Boolean   @default(false)
+  canUpdate  Boolean   @default(false)
+  canDelete  Boolean   @default(false)
+  assignedAt DateTime  @default(now())
+  processes  processes @relation(fields: [processId], references: [id], onDelete: Cascade)
+  users      users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, processId])
+}
+
+model user_roles {
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+  assignedBy String?
+  roles      roles    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  users      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model users {
+  id                                                  String                 @id
+  email                                               String                 @unique
+  username                                            String?                @unique
+  password                                            String?
+  first_name                                          String?
+  last_name                                           String?
+  role                                                String?
+  created_at                                          DateTime               @default(now())
+  updated_at                                          DateTime
+  password_hash                                       String?
+  last_login                                          DateTime?
+  failed_login_attempts                               Int?                   @default(0)
+  account_locked_until                                DateTime?
+  contact_number                                      String?
+  createdBy                                           String?
+  designation                                         String?
+  failedAttempts                                      Int?                   @default(0)
+  isActive                                            Boolean                @default(true)
+  lockedUntil                                         DateTime?
+  loginId                                             String?                @unique
+  name                                                String?
+  signature                                           String?
+  status                                              UserStatus?            @default(ACTIVE)
+  updatedBy                                           String?
+  userGroupId                                         String?
+  userType                                            UserType?
+  audit_logs                                          audit_logs[]
+  document_assignments                                document_assignments[]
+  documents                                           documents[]
+  notifications                                       notifications[]
+  project_assignments                                 project_assignments[]
+  projects                                            projects[]
+  refresh_tokens                                      refresh_tokens[]
+  tasks_tasks_assigned_byTousers                      tasks[]                @relation("tasks_assigned_byTousers")
+  tasks_tasks_assigned_toTousers                      tasks[]                @relation("tasks_assigned_toTousers")
+  user_privileges                                     user_privileges[]
+  user_processes                                      user_processes[]
+  user_roles                                          user_roles[]
+  user_groups                                         user_groups?           @relation(fields: [userGroupId], references: [id])
+  workgroup_members_workgroup_members_added_byTousers workgroup_members[]    @relation("workgroup_members_added_byTousers")
+  workgroup_members_workgroup_members_user_idTousers  workgroup_members[]    @relation("workgroup_members_user_idTousers")
+  workgroups                                          workgroups[]
+}
+
+model workgroup_members {
+  id                                      String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workgroup_id                            String?     @db.Uuid
+  user_id                                 String?
+  member_role                             String?     @default("member") @db.VarChar(20)
+  joined_at                               DateTime?   @default(now()) @db.Timestamp(6)
+  added_by                                String?
+  status                                  String?     @default("active") @db.VarChar(20)
+  users_workgroup_members_added_byTousers users?      @relation("workgroup_members_added_byTousers", fields: [added_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_workgroup_members_user_idTousers  users?      @relation("workgroup_members_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  workgroups                              workgroups? @relation(fields: [workgroup_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([workgroup_id, user_id])
+  @@index([user_id], map: "idx_workgroup_members_user")
+  @@index([workgroup_id], map: "idx_workgroup_members_wg")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model workgroups {
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String              @db.VarChar(200)
+  organization_id     String              @db.Uuid
+  workgroup_type      String              @db.VarChar(20)
+  classification      String              @db.VarChar(20)
+  category            String              @db.VarChar(20)
+  parent_workgroup_id String?             @db.Uuid
+  email               String?             @db.VarChar(255)
+  max_members         Int?                @default(100)
+  status              String?             @default("active") @db.VarChar(20)
+  created_at          DateTime?           @default(now()) @db.Timestamp(6)
+  created_by          String?
+  updated_at          DateTime?           @default(now()) @db.Timestamp(6)
+  projects            projects[]
+  workgroup_members   workgroup_members[]
+  users               users?              @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  organizations       organizations       @relation(fields: [organization_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  workgroups          workgroups?         @relation("workgroupsToworkgroups", fields: [parent_workgroup_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_workgroups    workgroups[]        @relation("workgroupsToworkgroups")
+
+  @@index([organization_id], map: "idx_workgroup_org")
+}
+
+enum AccessLevel {
+  NATIONAL
+  REGION
+  AREA
+  CITY
+}
+
+enum GroupStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum GroupType {
+  INTERNAL_DEPARTMENT
+  CUSTOMER
+  VENDOR
+  TOWER_PROVIDER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+model atp_document_templates {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  template_code   String    @unique @db.VarChar(50)
+  template_name   String    @db.VarChar(200)
+  category        String    @db.VarChar(50)
+  version         String?   @default("1.0") @db.VarChar(20)
+  is_active       Boolean?  @default(true)
+  form_schema     Json
+  checklist_items Json?     @default("[]")
+  workflow_config Json?     @default("{}")
+  created_by      String?   @db.VarChar(100)
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+  updated_at      DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([category], map: "idx_atp_templates_category")
+  @@index([is_active], map: "idx_atp_templates_active")
+}
+
+model atp_document_attachments {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  atp_id        String?        @db.Uuid
+  file_name     String         @db.VarChar(255)
+  original_name String         @db.VarChar(255)
+  file_path     String         @db.VarChar(500)
+  file_size     Int?
+  mime_type     String?        @db.VarChar(100)
+  file_type     String?        @db.VarChar(50)
+  uploaded_by   String?        @db.VarChar(100)
+  uploaded_at   DateTime?      @default(now()) @db.Timestamp(6)
+  is_active     Boolean?       @default(true)
+  atp_documents atp_documents? @relation(fields: [atp_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([atp_id], map: "idx_atp_attachments_atp")
+  @@index([file_type], map: "idx_atp_attachments_type")
+}
+
+enum UserType {
+  INTERNAL
+  CUSTOMER
+  VENDOR
+  TOWER_PROVIDER
+}
+
+model workspaces {
+  id                String   @id @default(dbgenerated("gen_random_uuid()"))
+  code              String   @unique @db.VarChar(80)
+  name              String   @db.VarChar(150)
+  customerGroupId   String   @db.VarChar(255)
+  vendorOwnerId     String   @db.VarChar(255)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  sites             sites[]
+  tasks             tasks[]
+}
+
+model sites {
+  id             String   @id @default(dbgenerated("gen_random_uuid()"))
+  site_id        String   @unique @db.VarChar(100)
+  site_name      String   @db.VarChar(255)
+  scope          String?  @default("MW") @db.VarChar(50)
+  region         String   @db.VarChar(100)
+  city           String   @db.VarChar(100)
+  ne_latitude    Decimal? @db.Decimal(10, 8)
+  ne_longitude   Decimal? @db.Decimal(11, 8)
+  fe_latitude    Decimal? @db.Decimal(10, 8)
+  fe_longitude   Decimal? @db.Decimal(11, 8)
+  status         String?  @default("ACTIVE") @db.VarChar(50)
+  atp_required   Boolean? @default(true)
+  atp_type       String?  @default("BOTH") @db.VarChar(20)
+  workflow_stage String?  @default("REGISTERED") @db.VarChar(50)
+  workspaceId    String?  @db.VarChar(36)
+  workspace      workspaces? @relation(fields: [workspaceId], references: [id])
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  tasks          tasks[]
+
+  @@index([region])
+  @@index([status])
+  @@index([scope])
+  @@index([atp_required])
+  @@index([workflow_stage])
+}

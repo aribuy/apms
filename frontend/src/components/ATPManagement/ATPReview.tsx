@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, AlertTriangle, Clock, FileText, Plus } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { CheckCircle, XCircle, Clock, FileText, Plus } from 'lucide-react';
 
 interface ATP {
   id: string;
@@ -45,13 +45,7 @@ const ATPReview: React.FC = () => {
   const [reviewDecision, setReviewDecision] = useState('');
   const [reviewComments, setReviewComments] = useState('');
   const [punchlistItems, setPunchlistItems] = useState<NewPunchlistItem[]>([]);
-  const [showPunchlistForm, setShowPunchlistForm] = useState(false);
-
-  useEffect(() => {
-    fetchPendingReviews();
-  }, [currentRole]);
-
-  const fetchPendingReviews = async () => {
+  const fetchPendingReviews = useCallback(async () => {
     try {
       const response = await fetch(`http://localhost:3011/api/v1/atp/reviews/pending?role=${currentRole}`);
       const data = await response.json();
@@ -67,7 +61,11 @@ const ATPReview: React.FC = () => {
     } catch (error) {
       console.error('Error fetching pending reviews:', error);
     }
-  };
+  }, [currentRole]);
+
+  useEffect(() => {
+    fetchPendingReviews();
+  }, [fetchPendingReviews]);
 
   const fetchATPDetails = async (atpId: string) => {
     try {
@@ -130,7 +128,6 @@ const ATPReview: React.FC = () => {
       severity: 'major',
       category: 'General'
     }]);
-    setShowPunchlistForm(true);
   };
 
   const updatePunchlistItem = (index: number, field: keyof NewPunchlistItem, value: string) => {

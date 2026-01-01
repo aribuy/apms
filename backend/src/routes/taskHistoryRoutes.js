@@ -1,20 +1,23 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 
 // Use the same Prisma instance from server.js
 let prisma;
 try {
   const { PrismaClient } = require('@prisma/client');
   prisma = new PrismaClient();
-  console.log('Prisma client initialized in taskHistoryRoutes');
+  logger.debug('Prisma client initialized in taskHistoryRoutes');
 } catch (error) {
-  console.error('Error initializing Prisma:', error);
+  logger.error({ err: error }, 'Error initializing Prisma');
 }
+const { validateBody } = require('../middleware/validator');
+const { taskHistoryLogSchema } = require('../validations/taskHistory');
 
 // Get complete site journey summary
 router.get('/site-journey', async (req, res) => {
   try {
-    const { site_id, region, status } = req.query;
+    const { site_id, region } = req.query;
     
     let query = `
       SELECT 
@@ -95,7 +98,7 @@ router.get('/site-journey', async (req, res) => {
       count: result.length
     });
   } catch (error) {
-    console.error('Error fetching site journey:', error);
+    logger.error({ err: error }, 'Error fetching site journey');
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch site journey', 
@@ -144,7 +147,7 @@ router.get('/site/:siteId/history', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching site history:', error);
+    logger.error({ err: error }, 'Error fetching site history');
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch site history', 
@@ -179,7 +182,7 @@ router.get('/task/:taskId/history', async (req, res) => {
       count: history.length
     });
   } catch (error) {
-    console.error('Error fetching task history:', error);
+    logger.error({ err: error }, 'Error fetching task history');
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch task history', 
@@ -191,7 +194,7 @@ router.get('/task/:taskId/history', async (req, res) => {
 // Export site journey data to CSV
 router.get('/export/site-journey', async (req, res) => {
   try {
-    const { format = 'csv', region, status } = req.query;
+    const { format = 'csv' } = req.query;
 
     const query = `
       SELECT 
@@ -267,7 +270,7 @@ router.get('/export/site-journey', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error exporting site journey:', error);
+    logger.error({ err: error }, 'Error exporting site journey');
     res.status(500).json({ 
       success: false, 
       error: 'Failed to export site journey', 
@@ -277,7 +280,7 @@ router.get('/export/site-journey', async (req, res) => {
 });
 
 // Manually log task event (for API integration)
-router.post('/log-event', async (req, res) => {
+router.post('/log-event', validateBody(taskHistoryLogSchema, { stripUnknown: false }), async (req, res) => {
   try {
     const {
       site_id,
@@ -319,7 +322,7 @@ router.post('/log-event', async (req, res) => {
       message: 'Task event logged successfully'
     });
   } catch (error) {
-    console.error('Error logging task event:', error);
+    logger.error({ err: error }, 'Error logging task event');
     res.status(500).json({ 
       success: false, 
       error: 'Failed to log task event', 
